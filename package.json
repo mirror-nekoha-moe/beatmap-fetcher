@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "dotenv": "^17.2.3",
+    "node-libcurl": "^4.1.0",
     "osu-api-v2-js": "^2.1.2",
     "pg": "^8.16.3"
   }

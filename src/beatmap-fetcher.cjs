@@ -21,6 +21,7 @@ const pool = new Pool({
 let last_known_beatmapset_id = 0;
 
 (async () => {
+  console.log('Testing PostgreSQL connection...');
   try {
     const client = await pool.connect();
     console.log('Successfully connected to PostgreSQL!');

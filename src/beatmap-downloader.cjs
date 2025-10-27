@@ -2,17 +2,19 @@ const fs = require("fs");
 const path = require("path");
 const fetch = require("node-fetch");
 const dotenv = require("dotenv");
+const { Curl } = require('node-libcurl');
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 const basePath = path.resolve(__dirname, process.env.STORAGE_DIR);
-const COOKIE_FILE = path.resolve(_dirname, process.env.COOKIE_FILE);
+const COOKIE_FILE = path.resolve(__dirname, process.env.COOKIE_FILE);
 
 let osu_session = "";
 
 function readCookie() {
   try {
     osu_session = fs.readFileSync(COOKIE_FILE, "utf-8").trim();
+    console.log("Successfully read cookie file");
   } catch (err) {
     console.error("Failed to read cookie file", err);
   }
@@ -20,37 +22,51 @@ function readCookie() {
 
 readCookie();
 setInterval(readCookie, 3600 * 1000);
+console.log("Set readCookie() to execute once per hour.");
 
 async function getDownloadUrl(beatmapsetId) {
-    // download link with no video
-    const url = `https://osu.ppy.sh/beatmapsets/${beatmapsetId}/download?noVideo=1`;
+	if (!osu_session || typeof osu_session !== "string") {
+		throw new Error("osu_session must be a non-empty string");
+	}
 
-    const response = await fetch(url, {
-    method: "GET",
-    headers: {
-        'Accept': "*/*",
-        "Cookie": osu_session
-    },
-        // important! so fetch does not follow redirects
-        redirect: "manual"
-    });
+	// Decode once if needed (sometimes %25 means double-encoded)
+	let cookieValue = osu_session;
+	if (cookieValue.includes("%25")) cookieValue = decodeURIComponent(cookieValue);
 
-    // The final download URL is "Location"
-    const finalUrl = response.headers.get("location");
-    if (!finalUrl) {
-        throw new Error("Could not get location URL.");
-    }
+	const url = `https://osu.ppy.sh/beatmapsets/${beatmapsetId}/download?noVideo=1`;
 
-    try {
-        const parsed = new URL(finalUrl);
-        if (!parsed.hostname.startsWith("bm")) {
-            throw new Error(`Invalid download domain: ${parsed.hostname}`);
-        }
-    } catch (err) {
-        throw new Error("Invalid URL returned: " + finalUrl);
-    }
-    return finalUrl;
+	return await new Promise((resolve, reject) => {
+		const curl = new Curl();
+
+		curl.setOpt("URL", url);
+		curl.setOpt("FOLLOWLOCATION", true);
+		curl.setOpt("COOKIE", cookieValue);
+		curl.setOpt("REFERER", `https://osu.ppy.sh/beatmapsets/${beatmapsetId}`);
+		curl.setOpt("HTTPHEADER", [
+			"Accept: */*",
+			"Connection: keep-alive",
+		]);
+		curl.setOpt("SSL_VERIFYPEER", false); // optional: mimic curl -L
+
+		curl.on("end", function (statusCode, body, headers) {
+			const finalUrl = this.getInfo("EFFECTIVE_URL");
+			this.close();
+
+			if (!finalUrl || !finalUrl.startsWith("https://bm")) {
+				return reject(new Error("Invalid download domain: " + finalUrl));
+			}
+			resolve(finalUrl);
+		});
+
+		curl.on("error", function (err) {
+			this.close();
+			reject(err);
+		});
+
+		curl.perform();
+	});
 }
+
 
 async function downloadBeatmapSet(url, beatmapsetId) {
 	// Create the beatmapset folder

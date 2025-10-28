@@ -3,8 +3,12 @@ const path = require("path");
 const fetch = require("node-fetch");
 const dotenv = require("dotenv");
 const { Curl } = require('node-libcurl');
+const osu = require('osu-api-v2-js');
+
+const db = require('./pgDatabaseController.cjs');
 
 dotenv.config({ path: path.join(__dirname, ".env") });
+
 
 const basePath = path.resolve(__dirname, process.env.STORAGE_DIR);
 const COOKIE_FILE = path.resolve(__dirname, process.env.COOKIE_FILE);
@@ -19,10 +23,6 @@ function readCookie() {
     console.error("Failed to read cookie file", err);
   }
 }
-
-readCookie();
-setInterval(readCookie, 3600 * 1000);
-console.log("Set readCookie() to execute once per hour.");
 
 async function getDownloadUrl(beatmapsetId) {
 	if (!osu_session || typeof osu_session !== "string") {
@@ -67,7 +67,6 @@ async function getDownloadUrl(beatmapsetId) {
 	});
 }
 
-
 async function downloadBeatmapSet(url, beatmapsetId) {
 	// Create the beatmapset folder
 	const folderPath = path.join(basePath, String(beatmapsetId));
@@ -98,5 +97,40 @@ async function downloadBeatmapSet(url, beatmapsetId) {
 	return filePath;
 }
 
-// Export the functions
-module.exports = { getDownloadUrl, downloadBeatmapSet };
+async function findNextHighestBeatmapset(osu, currentHighestId) {
+	const step = 10000;
+	let newHighest = currentHighestId;
+	let foundAny = false;
+
+	console.log(`Searching for new beatmapsets between ${currentHighestId} and ${currentHighestId + step}...`);
+
+	for (let id = currentHighestId + 1; id <= currentHighestId + step; id++) {
+		try {
+			const beatmapset = await osu.beatmapset.get({ id });
+			newHighest = id;
+			foundAny = true;
+
+			// optional: directly store it
+			await upsertBeatmapset(client, /* ... */);
+			for (const bm of beatmapset.beatmaps) {
+				await upsertBeatmap(client, /* ... */);
+			}
+
+			console.log(`Found beatmapset ${id} (${beatmapset.title} - ${beatmapset.artist})`);
+		} catch (err) {
+			if (err.response?.status === 404) continue; // skip missing
+			console.error(`Error fetching beatmapset ${id}:`, err.message);
+		}
+	}
+
+	if (!foundAny) {
+		console.log(`No new beatmapsets found in range ${currentHighestId + 1}-${currentHighestId + step}. Will retry.`);
+	} else {
+		console.log(`Updated highest known beatmapset ID to ${newHighest}`);
+	}
+
+	return newHighest;
+}
+
+
+module.exports = { getDownloadUrl, downloadBeatmapSet, readCookie };

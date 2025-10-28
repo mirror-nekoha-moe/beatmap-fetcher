@@ -1,8 +1,25 @@
 {
+  "name": "beatmap-fetcher",
+  "version": "0.0.1",
+  "main": "src/index.cjs",
+  "scripts": {
+    "start": "node src/index.cjs"
+  },
   "dependencies": {
     "dotenv": "^17.2.3",
     "node-libcurl": "^4.1.0",
     "osu-api-v2-js": "^2.1.2",
     "pg": "^8.16.3"
-  }
+  },
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mirror-nekoha-moe/beatmap-fetcher.git"
+  },
+  "author": "nyaruku",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mirror-nekoha-moe/beatmap-fetcher/issues"
+  },
+  "homepage": "https://github.com/mirror-nekoha-moe/beatmap-fetcher#readme"
 }

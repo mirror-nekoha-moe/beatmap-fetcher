@@ -2,17 +2,6 @@ const { readCookie } = require('./beatmapController.cjs');
 const db = require('./pgDatabaseController.cjs');
 const config = require('./config.cjs');
 
-const pool = new Pool({
-  host: process.env.PG_HOSTNAME,
-  user: process.env.PG_USERNAME,
-  password: process.env.PG_PASSWORD,
-  database: process.env.PG_DATABASE,
-  max: 1000,
-  idleTimeoutMillis: 0,
-  connectionTimeoutMillis: 0
-});
-
-
 async function fetchHighestKnownBeatmapsetId() {
     try {
         const idRaw = await db.getHighestBeatmapsetId();

@@ -3,6 +3,16 @@ const path = require("path");
 const dotenv = require("dotenv");
 dotenv.config({ path: path.join(__dirname, ".env") });
 
+const pool = new Pool({
+  host: process.env.PG_HOSTNAME,
+  user: process.env.PG_USERNAME,
+  password: process.env.PG_PASSWORD,
+  database: process.env.PG_DATABASE,
+  max: 1000,
+  idleTimeoutMillis: 0,
+  connectionTimeoutMillis: 0
+});
+
 // Insert or update a beatmap row
 async function insertBeatmap(beatmap) {
 	const table = process.env.TABLE_BEATMAP;

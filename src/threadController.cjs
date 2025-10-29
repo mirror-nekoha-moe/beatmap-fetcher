@@ -1,42 +1,36 @@
-const { readCookie } = require('./beatmapController.cjs');
+const beatmapController = require('./beatmapController.cjs');
 const db = require('./pgDatabaseController.cjs');
-const config = require('./config.cjs');
-
-async function fetchHighestKnownBeatmapsetId() {
-    try {
-        const idRaw = await db.getHighestBeatmapsetId();
-        const id = Number(idRaw) || 0; // coerce possible string/bigint to number
-        if (!Number.isFinite(id)) {
-            console.warn('Received non-numeric highest beatmapset id from DB:', idRaw);
-            return config.highestKnownBeatmapsetId;
-        }
-
-        if (id !== config.highestKnownBeatmapsetId) {
-            console.log(`Updated highestKnownBeatmapsetId: ${config.highestKnownBeatmapsetId} -> ${id}`);
-            config.highestKnownBeatmapsetId = id;
-        } else {
-            console.log(`highestKnownBeatmapsetId unchanged: ${config.highestKnownBeatmapsetId}`);
-        }
-        return config.highestKnownBeatmapsetId;
-    } catch (err) {
-        console.error('Failed to fetch highest beatmapset id from DB:', err);
-        return config.highestKnownBeatmapsetId; // return last known value on error
-    }
-}
+const thHelper = require('./threadHelper.cjs');
 
 async function thControllerMain() {
-    readCookie();
-    setInterval(readCookie, 3600 * 1000);
-    console.log("Set readCookie() to execute once per hour.");
+    try {
+        await beatmapController.osuAuthenticate();
 
-    fetchHighestKnownBeatmapsetId();
-    setInterval(fetchHighestKnownBeatmapsetId, 3600 * 1000);
-    console.log("Set fetchHighestKnownBeatmapsetId() to execute once per hour.");
+        await beatmapController.readCookie();
+        setInterval(beatmapController.readCookie, 3600 * 1000);
+        console.log("Set readCookie() to execute once per hour.");
 
-    db.updateStats();
-    setInterval(db.updateStats, 3600 * 1000);
-    console.log("Set updateStats() to execute once per hour.");
+        await thHelper.fetchHighestKnownBeatmapsetId();
+        setInterval(thHelper.fetchHighestKnownBeatmapsetId, 1800 * 1000);
+        console.log("Set fetchHighestKnownBeatmapsetId() to execute once every 30min.");
+
+        await db.updateStats();
+        setInterval(db.updateStats, 300 * 1000);
+        console.log("Set updateStats() to execute every 5min.");
+
+        thHelper.refreshNewBeatmapsets();
+        setInterval(thHelper.refreshNewBeatmapsets, 3600 * 1000);
+        console.log("Set refreshNewBeatmapsets() to execute once per hour.");
+
+        db.refreshAllBeatmapsetsFromOsu();
+        setInterval(db.refreshAllBeatmapsetsFromOsu, 3600 * 1000);
+        console.log("Set refreshAllBeatmapsetsFromOsu() to execute once per hour.");
+
+
+    } catch (err) {
+        console.error("threadControllerMain encountered an error:", err);
+        process.exit(1);
+    }
 }
-
 
 module.exports = { thControllerMain };

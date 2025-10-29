@@ -8,8 +8,9 @@ const { thControllerMain } = require('./threadController.cjs');
 
 async function main() {
 	console.log("[ beatmap-fetcher ]");
-	checkEnvVariables();
-	init();
+	await checkEnvVariables();
+	await init();
 	thControllerMain();
+	console.log("main() execution done.");	
 }
 main();

@@ -3,17 +3,45 @@ const path = require("path");
 const fetch = require("node-fetch");
 const dotenv = require("dotenv");
 const { Curl } = require('node-libcurl');
-const osu = require('osu-api-v2-js');
-
+const osu = require("osu-api-v2-js");
 const db = require('./pgDatabaseController.cjs');
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-
 const basePath = path.resolve(__dirname, process.env.STORAGE_DIR);
 const COOKIE_FILE = path.resolve(__dirname, process.env.COOKIE_FILE);
 
+const modeMap = { 
+	osu: 0,
+	taiko: 1,
+	fruits: 2,
+	mania: 3
+};
+const statusMap = {
+    graveyard: -2,
+    pending: 0,
+    ranked: 1,
+    approved: 2,
+    loved: 4
+};
+
 let osu_session = "";
+let osuApiInstance = null;
+
+async function osuAuthenticate() {
+	if (osuApiInstance) return osuApiInstance;
+    try {
+        console.log("Creating osu.API.createAsync...");
+        osuApiInstance = await osu.API.createAsync(
+			process.env.OSU_API_CLIENT_ID,
+			process.env.OSU_API_CLIENT_SECRET,
+        );
+        console.log("osu API authenticated successfully!");
+    } catch (err) {
+        console.error("Failed to authenticate osu API:", err);
+        throw err;
+    }
+}
 
 function readCookie() {
   try {
@@ -97,40 +125,100 @@ async function downloadBeatmapSet(url, beatmapsetId) {
 	return filePath;
 }
 
-async function findNextHighestBeatmapset(osu, currentHighestId) {
-	const step = 10000;
-	let newHighest = currentHighestId;
-	let foundAny = false;
+async function findNextHighestBeatmapset(currentHighestId) {
+    const step = 5000;
+    let newHighest = currentHighestId;
+    let foundAny = false;
 
-	console.log(`Searching for new beatmapsets between ${currentHighestId} and ${currentHighestId + step}...`);
+    console.log(`Searching for new beatmapsets ${currentHighestId + 1}-${currentHighestId + step}...`);
 
-	for (let id = currentHighestId + 1; id <= currentHighestId + step; id++) {
-		try {
-			const beatmapset = await osu.beatmapset.get({ id });
-			newHighest = id;
-			foundAny = true;
+    for (let id = currentHighestId + 1; id <= currentHighestId + step; id++) {
+        const beatmapset = await fetchBeatmapsetFromOsu(id);
+        if (beatmapset) {
+            newHighest = id;
+            foundAny = true;
+        }
+    }
 
-			// optional: directly store it
-			await upsertBeatmapset(client, /* ... */);
-			for (const bm of beatmapset.beatmaps) {
-				await upsertBeatmap(client, /* ... */);
-			}
+    if (!foundAny) console.log(`No new beatmapsets found in this range.`);
+    else console.log(`Updated highest known beatmapset ID to ${newHighest}`);
 
-			console.log(`Found beatmapset ${id} (${beatmapset.title} - ${beatmapset.artist})`);
-		} catch (err) {
-			if (err.response?.status === 404) continue; // skip missing
-			console.error(`Error fetching beatmapset ${id}:`, err.message);
-		}
-	}
-
-	if (!foundAny) {
-		console.log(`No new beatmapsets found in range ${currentHighestId + 1}-${currentHighestId + step}. Will retry.`);
-	} else {
-		console.log(`Updated highest known beatmapset ID to ${newHighest}`);
-	}
-
-	return newHighest;
+    return newHighest;
 }
 
+async function fetchBeatmapsetFromOsu(id) {
+    try {
+        // Correct API call
+		const beatmapset = await osuApiInstance.getBeatmapset(id); 
 
-module.exports = { getDownloadUrl, downloadBeatmapSet, readCookie };
+        // If API returns null → treat as deleted
+        if (!beatmapset) {
+            const exists = await db.beatmapsetExists(id);
+            if (exists) {
+                await db.markBeatmapsetDeleted(id, true);
+                console.warn(`Beatmapset ${id} not found → marked as deleted in DB`);
+            } else {
+                console.warn(`Beatmapset ${id} not found and not in DB`);
+            }
+            return null;
+        }
+
+        // Check if we need to re-download
+        const dbRow = await db.getBeatmapsetById(id);
+        let needDownload = false;
+
+        if (!dbRow) {
+            needDownload = true;
+        } else {
+            const apiUpdated = new Date(beatmapset.updated);
+            const dbUpdated = dbRow.updated ? new Date(dbRow.updated) : null;
+
+            // Re-download if DB missing or API has newer update
+            if (!dbRow.downloaded || (dbUpdated && apiUpdated > dbUpdated)) {
+                needDownload = true;
+            }
+        }
+
+		beatmapset.status = statusMap[beatmapset.status] ?? 0;
+        beatmapset.osu = modeMap['osu'] ?? 0;
+        beatmapset.taiko = modeMap['taiko'] ?? 0;
+        beatmapset.fruits = modeMap['fruits'] ?? 0;
+        beatmapset.mania = modeMap['mania'] ?? 0;
+        
+		// Insert or update beatmapset
+        await db.insertBeatmapset({
+            ...beatmapset,
+            deleted: false,
+            downloaded: needDownload
+        });
+
+        // Insert or update each beatmap individually
+        if (beatmapset.beatmaps && Array.isArray(beatmapset.beatmaps)) {
+            for (const bm of beatmapset.beatmaps) {
+				bm.mode = modeMap[bm.mode] ?? 0;
+				bm.status = statusMap[bm.status] ?? 0;
+                await db.insertBeatmap(bm);
+            }
+        }
+
+        // Download if needed and not deleted
+        if (needDownload && !beatmapset.deleted) {
+            try {
+                const downloadUrl = await getDownloadUrl(id);
+                await downloadBeatmapSet(downloadUrl, id);
+                await db.markBeatmapsetDownloaded(id, true);
+            } catch (dlErr) {
+                console.warn(`Download failed for beatmapset ${id}: ${dlErr.message}`);
+            }
+        }
+
+        console.log(`Fetched and processed beatmapset ${id} (${beatmapset.title} - ${beatmapset.artist})`);
+        return beatmapset;
+
+    } catch (err) {
+        // Preserve your detailed logging
+        console.error(`Error in fetchBeatmapsetFromOsu(${id}):`, err.message);
+        return null;
+    }
+}
+module.exports = { getDownloadUrl, downloadBeatmapSet, readCookie, osuAuthenticate, findNextHighestBeatmapset, fetchBeatmapsetFromOsu };

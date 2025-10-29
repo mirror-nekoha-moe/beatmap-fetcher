@@ -6,6 +6,7 @@
     "start": "node src/index.cjs"
   },
   "dependencies": {
+    "chalk": "^4.1.2",
     "dotenv": "^17.2.3",
     "node-libcurl": "^4.1.0",
     "osu-api-v2-js": "^2.1.2",

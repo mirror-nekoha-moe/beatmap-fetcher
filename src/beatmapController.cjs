@@ -1,3 +1,4 @@
+const chalk = require('chalk');
 const fs = require("fs");
 const path = require("path");
 const fetch = require("node-fetch");
@@ -31,14 +32,14 @@ let osuApiInstance = null;
 async function osuAuthenticate() {
 	if (osuApiInstance) return osuApiInstance;
     try {
-        console.log("Creating osu.API.createAsync...");
+        console.log(chalk.bgBlue("Creating osu.API.createAsync..."));
         osuApiInstance = await osu.API.createAsync(
 			process.env.OSU_API_CLIENT_ID,
 			process.env.OSU_API_CLIENT_SECRET,
         );
-        console.log("osu API authenticated successfully!");
+        console.log(chalk.bgGreen("osu API authenticated successfully!"));
     } catch (err) {
-        console.error("Failed to authenticate osu API:", err);
+        console.error(chalk.red("Failed to authenticate osu API:", err));
         throw err;
     }
 }
@@ -46,9 +47,9 @@ async function osuAuthenticate() {
 function readCookie() {
   try {
     osu_session = fs.readFileSync(COOKIE_FILE, "utf-8").trim();
-    console.log("Successfully read cookie file");
+    console.log(chalk.bgGreen("Successfully read cookie file"));
   } catch (err) {
-    console.error("Failed to read cookie file", err);
+    console.error(chalk.red("Failed to read cookie file", err));
   }
 }
 
@@ -81,7 +82,7 @@ async function getDownloadUrl(beatmapsetId) {
 			this.close();
 
 			if (!finalUrl || !finalUrl.startsWith("https://bm")) {
-				return reject(new Error("Invalid download domain: " + finalUrl));
+				return reject(new Error("Invalid download domain: " + finalUrl + "\n" + chalk.yellow("**(Probably Download disabled)**")));
 			}
 			resolve(finalUrl);
 		});
@@ -121,7 +122,7 @@ async function downloadBeatmapSet(url, beatmapsetId) {
 		fileStream.on("finish", resolve);
 	});
 
-	console.log("Downloaded:" + filePath);
+	console.log(chalk.cyan("Downloaded:" + chalk.whiteBright(filePath)));
 	return filePath;
 }
 
@@ -130,7 +131,7 @@ async function findNextHighestBeatmapset(currentHighestId) {
     let newHighest = currentHighestId;
     let foundAny = false;
 
-    console.log(`Searching for new beatmapsets ${currentHighestId + 1}-${currentHighestId + step}...`);
+    console.log(chalk.bgBlue(`Searching for new beatmapsets ${currentHighestId + 1}-${currentHighestId + step}...`));
 
     for (let id = currentHighestId + 1; id <= currentHighestId + step; id++) {
         const beatmapset = await fetchBeatmapsetFromOsu(id);
@@ -140,8 +141,8 @@ async function findNextHighestBeatmapset(currentHighestId) {
         }
     }
 
-    if (!foundAny) console.log(`No new beatmapsets found in this range.`);
-    else console.log(`Updated highest known beatmapset ID to ${newHighest}`);
+    if (!foundAny) console.log(chalk.bgYellow(`No new beatmapsets found in this range.`));
+    else console.log(chalk.bgBlue(`Updated highest known beatmapset ID to ${newHighest}`));
 
     return newHighest;
 }
@@ -212,12 +213,12 @@ async function fetchBeatmapsetFromOsu(id) {
             }
         }
 
-        console.log(`Fetched and processed beatmapset ${id} (${beatmapset.title} - ${beatmapset.artist})`);
+        console.log(chalk.green(`Fetched and processed beatmapset ${chalk.white(id)} (${chalk.white(beatmapset.title)} - ${chalk.white(beatmapset.artist)})`));
         return beatmapset;
 
     } catch (err) {
         // Preserve your detailed logging
-        console.error(`Error in fetchBeatmapsetFromOsu(${id}):`, err.message);
+        console.error(chalk.red(`Error in fetchBeatmapsetFromOsu(${id}):`, err.message));
         return null;
     }
 }

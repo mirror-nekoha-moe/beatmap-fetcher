@@ -149,7 +149,6 @@ async function findNextHighestBeatmapset(currentHighestId) {
 
 async function fetchBeatmapsetFromOsu(id) {
     try {
-        // Correct API call
 		const beatmapset = await osuApiInstance.getBeatmapset(id); 
 
         // If API returns null → treat as deleted

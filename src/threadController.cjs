@@ -18,15 +18,13 @@ async function thControllerMain() {
         setInterval(db.updateStats, 300 * 1000);
         console.log("Set updateStats() to execute every 5min.");
 
-        thHelper.refreshNewBeatmapsets();
-        setInterval(thHelper.refreshNewBeatmapsets, 3600 * 1000);
-        console.log("Set refreshNewBeatmapsets() to execute once per hour.");
-
-        db.refreshAllBeatmapsetsFromOsu();
+        await db.refreshAllBeatmapsetsFromOsu();
         setInterval(db.refreshAllBeatmapsetsFromOsu, 3600 * 1000);
         console.log("Set refreshAllBeatmapsetsFromOsu() to execute once per hour.");
 
-
+        thHelper.refreshNewBeatmapsets();
+        setInterval(thHelper.refreshNewBeatmapsets, 3600 * 1000);
+        console.log("Set refreshNewBeatmapsets() to execute once per hour.");
     } catch (err) {
         console.error("threadControllerMain encountered an error:", err);
         process.exit(1);

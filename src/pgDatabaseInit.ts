@@ -1,29 +1,41 @@
-const path = require("path");
-const dotenv = require("dotenv");
-const { Pool } = require('pg');
-
-const dbModel = require('./pgDatabaseModel.cjs');
-const schema = dbModel.schema;
+import path from 'path';
+import dotenv from 'dotenv';
+import { Pool, PoolClient } from 'pg';
+import { schema } from './pgDatabaseModel';
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-const primaryKeys = [
-	{ table: process.env.TABLE_BEATMAP, column: 'id' },
-	{ table: process.env.TABLE_BEATMAPSET, column: 'id' },
+interface PrimaryKey {
+    table: string;
+    column: string;
+}
+
+interface ForeignKey {
+    sourceTable: string;
+    sourceColumn: string;
+    targetTable: string;
+    targetColumn: string;
+    onDelete: string;
+    constraintName: string;
+}
+
+const primaryKeys: PrimaryKey[] = [
+	{ table: process.env.TABLE_BEATMAP!, column: 'id' },
+	{ table: process.env.TABLE_BEATMAPSET!, column: 'id' },
 ];
 
-const foreignKeys = [
+const foreignKeys: ForeignKey[] = [
 	{
-		sourceTable: process.env.TABLE_BEATMAP,
+		sourceTable: process.env.TABLE_BEATMAP!,
 		sourceColumn: 'beatmapset_id',
-		targetTable: process.env.TABLE_BEATMAPSET,
+		targetTable: process.env.TABLE_BEATMAPSET!,
 		targetColumn: 'id',
 		onDelete: 'CASCADE',
 		constraintName: 'fk_beatmapset_id',
 	},
 ];
 
-async function tableExists(client, tableName) {
+async function tableExists(client: PoolClient, tableName: string): Promise<boolean> {
 	const res = await client.query(
 		`SELECT EXISTS (
 			SELECT 1 FROM information_schema.tables 
@@ -34,24 +46,24 @@ async function tableExists(client, tableName) {
 	return res.rows[0].exists;
 }
 
-async function getTableColumns(client, tableName) {
+async function getTableColumns(client: PoolClient, tableName: string): Promise<string[]> {
 	const res = await client.query(
 		`SELECT column_name FROM information_schema.columns 
 		 WHERE table_schema = 'public' AND table_name = $1`,
 		[tableName]
 	);
-	return res.rows.map(r => r.column_name);
+	return res.rows.map((r: { column_name: string }) => r.column_name);
 }
 
-function extractColumnDefinitions(schemaSQL) {
+function extractColumnDefinitions(schemaSQL: string): Record<string, string> {
 	const createStmt = schemaSQL.match(/CREATE TABLE[^;]+;/s);
 	if (!createStmt) return {};
 	const cols = createStmt[0]
 		.split('\n')
-		.map(l => l.trim())
-		.filter(l => l && !l.startsWith('CREATE TABLE') && !l.startsWith(')') && !l.startsWith('ALTER') && !l.startsWith('CONSTRAINT'))
-		.map(l => l.replace(/,$/, ''));
-	const defs = {};
+		.map((l: string) => l.trim())
+		.filter((l: string) => l && !l.startsWith('CREATE TABLE') && !l.startsWith(')') && !l.startsWith('ALTER') && !l.startsWith('CONSTRAINT'))
+		.map((l: string) => l.replace(/,$/, ''));
+	const defs: Record<string, string> = {};
 	for (const line of cols) {
 		const [col] = line.split(/\s+/);
 		defs[col.replace(/["`]/g, '')] = line;
@@ -59,7 +71,7 @@ function extractColumnDefinitions(schemaSQL) {
 	return defs;
 }
 
-async function ensurePrimaryKeys(client) {
+async function ensurePrimaryKeys(client: PoolClient): Promise<void> {
 	for (const pk of primaryKeys) {
 		const constraintName = `${pk.table}_pkey`;
 		const exists = await client.query(
@@ -82,7 +94,7 @@ async function ensurePrimaryKeys(client) {
 	}
 }
 
-async function ensureForeignKeys(client) {
+async function ensureForeignKeys(client: PoolClient): Promise<void> {
 	for (const fk of foreignKeys) {
 		const exists = await client.query(
 			`SELECT 1
@@ -112,8 +124,8 @@ async function ensureForeignKeys(client) {
 }
 
 // Ensure table_stats has exactly one row
-async function ensureStatsRow(client) {
-	const tableName = process.env.TABLE_STATS;
+async function ensureStatsRow(client: PoolClient): Promise<void> {
+	const tableName = process.env.TABLE_STATS!;
 	const res = await client.query(`SELECT COUNT(*) AS cnt FROM public.${tableName}`);
 	const count = parseInt(res.rows[0].cnt, 10);
 
@@ -130,11 +142,11 @@ async function ensureStatsRow(client) {
 	}
 }
 
-async function init() {
+async function init(): Promise<void> {
 	const pool = new Pool({
-	  host: process.env.PG_HOSTNAME,
-	  user: process.env.PG_USERNAME,
-	  password: process.env.PG_PASSWORD,
+		host: process.env.PG_HOSTNAME,
+		user: process.env.PG_USERNAME,
+		password: process.env.PG_PASSWORD,
 	  database: process.env.PG_DATABASE,
 	  max: 20,
 	  idleTimeoutMillis: 0,
@@ -147,7 +159,7 @@ async function init() {
 		console.log('Successfully connected to PostgreSQL!');
 		client.release();
 	} catch (err) {
-		console.error('Failed to connect to PostgreSQL:', err);
+		console.error('Failed to connect to PostgreSQL:', err instanceof Error ? err.message : err);
 		process.exit(1);
 	}
 
@@ -156,23 +168,23 @@ async function init() {
 	try {
 		console.log('Checking PostgreSQL schema consistency...');
 		for (const [table, sql] of Object.entries(schema)) {
-			const tableNameMatch = sql.match(/CREATE TABLE IF NOT EXISTS public\.([^\s(]+)/i);
+			const tableNameMatch = (sql as string).match(/CREATE TABLE IF NOT EXISTS public\.([^\s(]+)/i);
 
 			if (!tableNameMatch) continue;
 			const tableName = tableNameMatch[1];
 
-			console.log(`Checking table: ${tableName}...`)
+			console.log(`Checking table: ${tableName}...`);
 			const exists = await tableExists(client, tableName);
 			
 			if (!exists) {
 				console.log(`Creating missing table: ${tableName}`);
-				await client.query(sql);
+				await client.query(sql as string);
 				continue;
 			}
 
-			console.log(`Get columns for table: ${tableName}...`)
+			console.log(`Get columns for table: ${tableName}...`);
 			const currentCols = await getTableColumns(client, tableName);
-			const definedCols = extractColumnDefinitions(sql);
+			const definedCols = extractColumnDefinitions(sql as string);
 
 			for (const [col, def] of Object.entries(definedCols)) {
 				if (!currentCols.includes(col)) {
@@ -186,11 +198,12 @@ async function init() {
 		await ensureStatsRow(client);
 		console.log('Database schema is fully up to date!');
 	} catch (err) {
-		console.error('Schema update failed:', err);
+		console.error('Schema update failed:', err instanceof Error ? err.message : err);
+		throw err;
 	} finally {
 		client.release();
 		await pool.end();
 	}
 }
 
-module.exports = { init };
+export { init };

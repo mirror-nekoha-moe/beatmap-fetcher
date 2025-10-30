@@ -1,8 +1,8 @@
-const db = require('./pgDatabaseController.cjs');
-const config = require('./config.cjs');
-const beatmapController = require('./beatmapController.cjs');
+import * as db from './pgDatabaseController';
+import { config } from './config';
+import * as beatmapController from './beatmapController';
 
-async function fetchHighestKnownBeatmapsetId() {
+export async function fetchHighestKnownBeatmapsetId(): Promise<number> {
     try {
         const idRaw = await db.getHighestBeatmapsetId();
         const id = Number(idRaw) || 0; // coerce possible string/bigint to number
@@ -19,12 +19,12 @@ async function fetchHighestKnownBeatmapsetId() {
         }
         return config.highestKnownBeatmapsetId;
     } catch (err) {
-        console.error('Failed to fetch highest beatmapset id from DB:', err);
+        console.error('Failed to fetch highest beatmapset id from DB:', err instanceof Error ? err.message : err);
         return config.highestKnownBeatmapsetId; // return last known value on error
     }
 }
 
-async function refreshNewBeatmapsets() {
+export async function refreshNewBeatmapsets(): Promise<void> {
     const currentHighest = config.highestKnownBeatmapsetId || 0;
     const newHighest = await beatmapController.findNextHighestBeatmapset(currentHighest);
     if (newHighest > currentHighest) {
@@ -34,5 +34,3 @@ async function refreshNewBeatmapsets() {
         console.log(`No new beatmapsets beyond ${currentHighest}`);
     }
 }
-
-module.exports = { fetchHighestKnownBeatmapsetId, refreshNewBeatmapsets };

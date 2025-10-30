@@ -1,8 +1,9 @@
-const path = require("path");
-const dotenv = require("dotenv");
+import path from 'path';
+import dotenv from 'dotenv';
+
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-const schema = {
+export const schema = {
     table_beatmap: `
         CREATE TABLE IF NOT EXISTS public.${process.env.TABLE_BEATMAP} (
             "id" BIGINT NOT NULL,
@@ -71,5 +72,3 @@ const schema = {
         ALTER TABLE public.${process.env.TABLE_STATS} OWNER TO ${process.env.PG_USERNAME};
     `,
 };
-
-module.exports = { schema };

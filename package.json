@@ -1,9 +1,14 @@
 {
   "name": "beatmap-fetcher",
   "version": "0.0.1",
-  "main": "src/index.cjs",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node src/index.cjs"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "build:watch": "tsc --watch"
   },
   "dependencies": {
     "chalk": "^4.1.2",
@@ -11,6 +16,13 @@
     "node-libcurl": "^4.1.0",
     "osu-api-v2-js": "^2.1.2",
     "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "@types/pg": "^8.15.6",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   },
   "description": "",
   "repository": {

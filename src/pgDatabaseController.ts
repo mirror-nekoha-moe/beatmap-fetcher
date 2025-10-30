@@ -1,22 +1,32 @@
-const { Pool } = require('pg');
-const path = require("path");
-const dotenv = require("dotenv");
-//const beatmapController = require('./beatmapController.cjs');
+import { Pool } from 'pg';
+import path from 'path';
+import dotenv from 'dotenv';
+
+interface DatabaseStats {
+    last_beatmapset_id: number;
+    beatmapset_count: number;
+    beatmap_count: number;
+    ranked_count: number;
+    approved_count: number;
+    loved_count: number;
+    graveyard_count: number;
+    pending_count: number;
+}
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 const pool = new Pool({
-  host: process.env.PG_HOSTNAME,
-  user: process.env.PG_USERNAME,
-  password: process.env.PG_PASSWORD,
-  database: process.env.PG_DATABASE,
-  max: 1000,
-  idleTimeoutMillis: 0,
-  connectionTimeoutMillis: 0
+    host: process.env.PG_HOSTNAME,
+    user: process.env.PG_USERNAME,
+    password: process.env.PG_PASSWORD,
+    database: process.env.PG_DATABASE,
+    max: 1000,
+    idleTimeoutMillis: 0,
+    connectionTimeoutMillis: 0
 });
 
 // Insert or update a beatmap row
-async function insertBeatmap(beatmap) {
+async function insertBeatmap(beatmap: any): Promise<void> {
 	const table = process.env.TABLE_BEATMAP;
 	
 	const client = await pool.connect();
@@ -50,15 +60,15 @@ async function insertBeatmap(beatmap) {
 			beatmap.bpm, beatmap.total_length, beatmap.version
 		]);
 	} catch (err) {
-  		console.error(err);
-  		return null;
+        console.error('Failed to insert beatmap:', err instanceof Error ? err.message : err);
+        throw err;
 	} finally {
 		client.release();
 	}
 }
 
 // Insert or update a beatmapset row
-async function insertBeatmapset(beatmapset) {
+async function insertBeatmapset(beatmapset: any): Promise<void> {
 	const table = process.env.TABLE_BEATMAPSET;
 
 	const client = await pool.connect();
@@ -92,58 +102,55 @@ async function insertBeatmapset(beatmapset) {
 				artist_unicode = EXCLUDED.artist_unicode
 			`, [
 				beatmapset.id, beatmapset.status, beatmapset.title, beatmapset.artist,
-				beatmapset.creator, beatmapset.beatmaps.length, beatmapset.submitted_date,
-				beatmapset.last_updated, beatmapset.ranked_date,
-				beatmapset.availability.download_disabled, beatmapset.source, beatmapset.tags,
+				beatmapset.creator, beatmapset.beatmaps?.length ?? 0, beatmapset.submitted_date,
+				beatmapset.last_update, beatmapset.ranked_date,
+				beatmapset.availability?.download_disabled ?? false, beatmapset.source, beatmapset.tags,
 				beatmapset.genre_id, beatmapset.language_id,
 				beatmapset.title_unicode, beatmapset.artist_unicode
 			]
 		);
 	} catch (err) {
-  		console.error(err);
-  		return null;
+		console.error(err);
 	} finally {
 		client.release();
 	}
 }
 
-async function beatmapsetExists(id) {
-	const client = await pool.connect();
-	try {
-		const res = await client.query(
-			`SELECT 1 FROM ${process.env.TABLE_BEATMAPSET} WHERE id = $1 LIMIT 1`,
-			[id]
-		);
-		return res.rowCount > 0;
-	} catch (err) {
-  		console.error(err);
-  		return null;
-	} finally {
-		client.release();
-	}
+async function beatmapsetExists(id: number): Promise<boolean> {
+    const client = await pool.connect();
+    try {
+        const res = await client.query(`
+            SELECT 1 FROM public.${process.env.TABLE_BEATMAPSET}
+            WHERE id = $1
+            ORDER BY id ASC
+        `, [id]);
+        return (res.rowCount ?? 0) > 0;
+    } finally {
+        client.release();
+    }
 }
 
-async function beatmapExists(id) {
-	const client = await pool.connect();
-	try {
-		const res = await client.query(
-			`SELECT 1 FROM ${process.env.TABLE_BEATMAP} WHERE id = $1 LIMIT 1`,
-			[id]
-		);
-		return res.rowCount > 0;
-	} catch (err) {
-  		console.error(err);
-  		return null;
-	} finally {
-		client.release();
-	}
-}
-
-async function getBeatmapsetById(id) {
+async function beatmapExists(id: number): Promise<boolean | null> {
     const client = await pool.connect();
     try {
         const res = await client.query(
-            `SELECT * FROM ${process.env.TABLE_BEATMAPSET} WHERE id = $1`,
+            `SELECT 1 FROM ${process.env.TABLE_BEATMAP} WHERE id = $1 ORDER BY id ASC LIMIT 1`,
+            [id]
+        );
+        return (res.rowCount ?? 0) > 0;
+    } catch (err) {
+        console.error(err);
+        return null;
+    } finally {
+        client.release();
+    }
+}
+
+async function getBeatmapsetById(id: number): Promise<any | null> {
+    const client = await pool.connect();
+    try {
+        const res = await client.query(
+            `SELECT * FROM ${process.env.TABLE_BEATMAPSET} WHERE id = $1 ORDER BY id ASC`,
             [id]
         );
         return res.rows[0] || null;
@@ -152,11 +159,11 @@ async function getBeatmapsetById(id) {
     }
 }
 
-async function getHighestBeatmapsetId() {
-	const client = await pool.connect();
-	try {
-		const query = `
-			SELECT MAX(id) AS highest_id
+async function getHighestBeatmapsetId(): Promise<number | null> {
+    const client = await pool.connect();
+    try {
+        const query = `
+            SELECT MAX(id) AS highest_id
 			FROM ${process.env.TABLE_BEATMAPSET};
 		`;
 		const res = await client.query(query);
@@ -169,9 +176,20 @@ async function getHighestBeatmapsetId() {
 	}
 }
 
-async function updateStats() {
-	console.log("Updating Stats Table...")
-	const client = await pool.connect();
+interface DatabaseStats {
+    last_beatmapset_id: number;
+    beatmapset_count: number;
+    beatmap_count: number;
+    ranked_count: number;
+    approved_count: number;
+    loved_count: number;
+    graveyard_count: number;
+    pending_count: number;
+}
+
+async function updateStats(): Promise<DatabaseStats | null> {
+    console.log("Updating Stats Table...");
+    const client = await pool.connect();
 	try {
 		const tableBeatmapset = process.env.TABLE_BEATMAPSET;
 		const tableBeatmap = process.env.TABLE_BEATMAP;
@@ -183,18 +201,17 @@ async function updateStats() {
 			WHERE NOT EXISTS (SELECT 1 FROM public.${tableStats});
 		`);
 	  
-		// Aggregate stats by osu! status codes
+		// Use a simpler query structure with one row of aggregates
 		const res = await client.query(`
 			SELECT
-				COALESCE(MAX(id), 0) AS last_beatmapset_id,
+				(SELECT COALESCE(MAX(id), 0) FROM public.${tableBeatmapset}) AS last_beatmapset_id,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset}) AS beatmapset_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmap}) AS beatmap_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = 1) AS ranked_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = 2) AS approved_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = 4) AS loved_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = -2) AS graveyard_count,
-				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status IN (-1,0,3)) AS pending_count
-			FROM public.${tableBeatmapset};
+				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status IN (-1,0,3)) AS pending_count;
 		`);
 	  
 		const stats = res.rows[0];
@@ -229,7 +246,7 @@ async function updateStats() {
 	}
 }
 
-async function markBeatmapsetDownloaded(id, downloaded = true) {
+async function markBeatmapsetDownloaded(id: number, downloaded: boolean = true): Promise<void> {
     const client = await pool.connect();
     try {
         await client.query(
@@ -241,7 +258,7 @@ async function markBeatmapsetDownloaded(id, downloaded = true) {
     }
 }
 
-async function markBeatmapsetDeleted(id, deleted = true) {
+async function markBeatmapsetDeleted(id: number, deleted: boolean = true): Promise<void> {
     const client = await pool.connect();
     try {
         await client.query(
@@ -253,36 +270,27 @@ async function markBeatmapsetDeleted(id, deleted = true) {
     }
 }
 
-async function refreshAllBeatmapsetsFromOsu() {
-	const beatmapController = require('./beatmapController.cjs');
+async function markBeatmapsetMissingAudio(id: number, missingAudio: boolean = true): Promise<void> {
     const client = await pool.connect();
     try {
-        const tableBeatmapset = process.env.TABLE_BEATMAPSET;
-        const res = await client.query(`SELECT id FROM public.${tableBeatmapset}`);
-        const ids = res.rows.map(r => r.id);
-
-        console.log(`Refreshing ${ids.length} beatmapsets from osu API...`);
-
-        for (const id of ids) {
-            await beatmapController.fetchBeatmapsetFromOsu(id);
-        }
-
-        console.log("Finished refreshing all beatmapsets.");
-    } catch (err) {
-        console.error("Error in refreshAllBeatmapsetsFromOsu:", err);
+        await client.query(
+            `UPDATE ${process.env.TABLE_BEATMAPSET} SET missing_audio = $1 WHERE id = $2`,
+            [missingAudio, id]
+        );
     } finally {
         client.release();
     }
 }
-module.exports = {
+
+export {
 	insertBeatmap,
 	insertBeatmapset,
 	beatmapsetExists,
 	beatmapExists,
 	getHighestBeatmapsetId,
 	updateStats,
-	refreshAllBeatmapsetsFromOsu,
 	getBeatmapsetById,
 	markBeatmapsetDeleted,
-	markBeatmapsetDownloaded
+	markBeatmapsetDownloaded,
+    markBeatmapsetMissingAudio
 };

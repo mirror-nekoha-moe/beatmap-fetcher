@@ -4,3 +4,4 @@
 .env
 /src/cookies
 /storage
+/dist

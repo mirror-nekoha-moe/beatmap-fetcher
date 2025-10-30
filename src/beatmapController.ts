@@ -66,7 +66,7 @@ export async function getDownloadUrl(beatmapsetId: number): Promise<string> {
     let cookieValue = osu_session;
     if (cookieValue.includes("%25")) cookieValue = decodeURIComponent(cookieValue);
 
-    const url = `https://osu.ppy.sh/beatmapsets/${beatmapsetId}/download?noVideo=1`;
+    const url = `https://osu.ppy.sh/beatmapsets/${beatmapsetId}/download`;
 
     return await new Promise<string>((resolve, reject) => {
         const curl = new Curl();
@@ -139,12 +139,28 @@ export async function findNextHighestBeatmapset(currentHighestId: number): Promi
 
     console.log(chalk.bgBlue(`Searching for new beatmapsets ${currentHighestId + 1}-${currentHighestId + step}...`));
 
-    // Check IDs sequentially
+    // Check IDs sequentially with delay between requests
     for (let id = currentHighestId + 1; id <= currentHighestId + step; id++) {
-        const beatmapset = await fetchBeatmapsetFromOsu(id);
-        if (beatmapset) {
-            newHighest = id;
-            foundAny = true;
+        try {
+            // Add delay between requests (500ms)
+            if (id > currentHighestId + 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            const beatmapset = await fetchBeatmapsetFromOsu(id);
+            if (beatmapset) {
+                newHighest = id;
+                foundAny = true;
+            }
+        } catch (err) {
+            if (err instanceof Error && err.message.includes('rate limit')) {
+                console.log(chalk.yellow('Rate limit hit, waiting 60 seconds...'));
+                await new Promise(resolve => setTimeout(resolve, 60000));
+                // Retry the same ID
+                id--;
+                continue;
+            }
+            throw err;
         }
     }
 
@@ -251,13 +267,21 @@ export async function fetchBeatmapsetFromOsu(id: number): Promise<any> {
     }
 
     try {
-        // Wrap the API call to catch 404s silently
+        // Wrap the API call to handle errors
         const getBeatmapset = async () => {
             try {
                 return await osuApiInstance.getBeatmapset(id);
             } catch (err: any) {
+                // Handle 404s silently
                 if (err?.status_code === 404 || (err instanceof Error && err.message.includes('Not Found'))) {
                     return null;
+                }
+                // Handle rate limits
+                if (err?.status_code === 429 || (err instanceof Error && err.message.includes('rate limit'))) {
+                    console.log(chalk.yellow(`Rate limit hit when fetching beatmapset ${id}, waiting 60 seconds...`));
+                    await new Promise(resolve => setTimeout(resolve, 60000));
+                    // Retry after waiting
+                    return await osuApiInstance.getBeatmapset(id);
                 }
                 throw err;
             }

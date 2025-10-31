@@ -23,27 +23,34 @@ const pool = new Pool({
     connectionTimeoutMillis: 0
 });
 
-interface ModeMap {
-    [key: string]: number;
+enum GameMode {
+    Osu = 0,
+    Taiko = 1,
+    Fruits = 2,
+    Mania = 3
 }
 
-interface StatusMap {
-    [key: string]: number;
+enum BeatmapStatus {
+    Graveyard = -2,
+    Pending = 0,
+    Ranked = 1,
+    Approved = 2,
+    Loved = 4
 }
 
-const modeMap: ModeMap = { 
-    osu: 0,
-    taiko: 1,
-    fruits: 2,
-    mania: 3
+const modeMap: Record<string, GameMode> = { 
+    osu: GameMode.Osu,
+    taiko: GameMode.Taiko,
+    fruits: GameMode.Fruits,
+    mania: GameMode.Mania
 };
 
-const statusMap: StatusMap = {
-    graveyard: -2,
-    pending: 0,
-    ranked: 1,
-    approved: 2,
-    loved: 4
+const statusMap: Record<string, BeatmapStatus> = {
+    graveyard: BeatmapStatus.Graveyard,
+    pending: BeatmapStatus.Pending,
+    ranked: BeatmapStatus.Ranked,
+    approved: BeatmapStatus.Approved,
+    loved: BeatmapStatus.Loved
 };
 
 let osu_session = "";
@@ -51,9 +58,9 @@ let osu_session = "";
 export function readCookie(): void {
     try {
         osu_session = fs.readFileSync(COOKIE_FILE, "utf-8").trim();
-        console.log(chalk.bgGreen("Successfully read cookie file"));
+        console.log(chalk.green("Successfully read cookie file"));
     } catch (err) {
-        console.error(chalk.red("Failed to read cookie file:", err instanceof Error ? err.message : err));
+        console.error(chalk.red("Failed to read cookie file:"), err instanceof Error ? err.message : err);
     }
 }
 
@@ -116,7 +123,12 @@ export async function downloadBeatmapSet(url: string, beatmapsetId: number): Pro
     const match = cd.match(/filename\*=UTF-8''(.+)|filename="(.+)"/);
     if (!match) throw new Error("Could not extract filename from headers");
 
-    const filename = decodeURIComponent(match[1] || match[2]);
+    let filename = decodeURIComponent(match[1] || match[2]);
+    
+    // Sanitize filename: replace invalid filesystem characters
+    // Replace / with ⧸ (division slash U+29F8) and \ with ⧹ (reverse solidus U+29F9)
+    filename = filename.replace(/\//g, '⧸').replace(/\\/g, '⧹');
+    
     const filePath = path.join(folderPath, filename);
 
     // Stream response to disk
@@ -133,11 +145,11 @@ export async function findNextHighestBeatmapset(currentHighestId: number): Promi
         await osuAuthenticate();
     }
 
-    const step = 5000; // How many sequential IDs to check
+    const step = 10000; // How many sequential IDs to check
     let newHighest = currentHighestId;
     let foundAny = false;
 
-    console.log(chalk.bgBlue(`Searching for new beatmapsets ${currentHighestId + 1}-${currentHighestId + step}...`));
+    console.log(chalk.cyan(`Searching for new beatmapsets ${currentHighestId + 1}-${currentHighestId + step}...`));
 
     // Check IDs sequentially with delay between requests
     for (let id = currentHighestId + 1; id <= currentHighestId + step; id++) {
@@ -165,9 +177,9 @@ export async function findNextHighestBeatmapset(currentHighestId: number): Promi
     }
 
     if (!foundAny) {
-        console.log(chalk.bgYellow(`No new beatmapsets found in this range.`));
+        console.log(chalk.gray(`No new beatmapsets found in range ${currentHighestId + 1}-${currentHighestId + step}`));
     } else {
-        console.log(chalk.bgBlue(`Updated highest known beatmapset ID to ${newHighest}`));
+        console.log(chalk.cyan(`Updated highest known beatmapset ID to ${newHighest}`));
     }
 
     return newHighest;
@@ -177,14 +189,14 @@ let osuApiInstance: any = null;
 
 export async function osuAuthenticate(): Promise<void> {
     try {
-        console.log(chalk.bgBlue("Creating osu.API.createAsync..."));
+        console.log(chalk.cyan("Authenticating with osu! API..."));
         osuApiInstance = await osu.API.createAsync(
             parseInt(process.env.OSU_API_CLIENT_ID!, 10),
             process.env.OSU_API_CLIENT_SECRET!
         );
-        console.log(chalk.bgGreen("osu API authenticated successfully!"));
+        console.log(chalk.green("osu! API authenticated successfully"));
     } catch (err) {
-        console.error(chalk.red("Failed to authenticate osu API:", err instanceof Error ? err.message : err));
+        console.error(chalk.red("Failed to authenticate osu! API:"), err instanceof Error ? err.message : err);
         throw err;
     }
 }
@@ -197,32 +209,55 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
     // Check if beatmapset is deleted based on deleted_at timestamp
     const isDeleted = !!rawBeatmapset.deleted_at;
     
-    // Check if download is disabled (missing audio)
-    const isMissingAudio = rawBeatmapset.availability?.download_disabled === true;
+    // Check if download is disabled (missing audio) from API
+    const isMissingAudioFromAPI = rawBeatmapset.availability?.download_disabled === true;
+    const isMissingAudioFromDB = dbRow?.missing_audio === true;
+
+    // Check if file actually exists on disk
+    const folderPath = path.join(basePath, String(rawBeatmapset.id));
+    const fileExistsOnDisk = fs.existsSync(folderPath) && fs.readdirSync(folderPath).some(file => file.endsWith('.osz'));
+
+    // Determine the correct downloaded state
+    let downloadedState = dbRow?.downloaded ?? false;
 
     if (!dbRow) {
-        // New beatmapset, needs download
-        needDownload = true;
+        // New beatmapset, needs download (unless missing audio from API)
+        needDownload = !isMissingAudioFromAPI;
     } else {
-        const apiUpdated = new Date(rawBeatmapset.last_updated || "");
-        const dbUpdated = dbRow.updated ? new Date(dbRow.updated) : null;
+        // Skip download if already marked as missing_audio in database AND API still says it's disabled
+        // (If API says it's now available, we should try to download even if DB had it marked as missing)
+        if (isMissingAudioFromDB && isMissingAudioFromAPI) {
+            needDownload = false;
+        } else if (dbRow.downloaded && fileExistsOnDisk) {
+            // Already downloaded and file exists, check if there are updates
+            const apiUpdated = new Date(rawBeatmapset.last_updated || "");
+            const dbUpdated = dbRow.updated ? new Date(dbRow.updated) : null;
 
-        // Re-download if not downloaded or has updates (unless missing audio)
-        if (!isMissingAudio && (!dbRow.downloaded || (dbUpdated && apiUpdated > dbUpdated))) {
-            needDownload = true;
+            // Only re-download if there are updates
+            if (dbUpdated && apiUpdated > dbUpdated && !isMissingAudioFromAPI) {
+                needDownload = true;
+            }
+        } else if (!dbRow.downloaded && fileExistsOnDisk) {
+            // File exists on disk but DB says not downloaded - fix the DB state
+            needDownload = false;
+            downloadedState = true;  // Update state so insertBeatmapset() will persist it
+            console.log(chalk.blue(`Fixed DB state for beatmapset ${rawBeatmapset.id} (file exists, marked as downloaded)`));
+        } else {
+            // Not downloaded yet or file missing, download it (unless missing audio)
+            needDownload = !isMissingAudioFromAPI;
         }
     }
 
     const beatmapset = {
         ...rawBeatmapset,
         status: statusMap[String(rawBeatmapset.status)] ?? 0,
-        osu: modeMap['osu'] ?? 0,
-        taiko: modeMap['taiko'] ?? 0,
-        fruits: modeMap['fruits'] ?? 0,
-        mania: modeMap['mania'] ?? 0,
+        osu: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'osu').length ?? 0,
+        taiko: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'taiko').length ?? 0,
+        fruits: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'fruits').length ?? 0,
+        mania: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'mania').length ?? 0,
         deleted: isDeleted,
-        downloaded: needDownload,
-        missing_audio: isMissingAudio
+        downloaded: downloadedState,             // Use corrected state
+        missing_audio: isMissingAudioFromAPI     // Use API status for missing_audio
     };
     
     // Insert or update beatmapset
@@ -233,8 +268,12 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
         for (const bm of rawBeatmapset.beatmaps) {
             const mappedBeatmap = {
                 ...bm,
-                mode: modeMap[bm.mode_int as string] ?? 0,
-                status: statusMap[bm.status as string] ?? 0
+                mode: modeMap[bm.mode as string] ?? 0,
+                status: statusMap[bm.status as string] ?? 0,
+                creator: rawBeatmapset.creator, // Add beatmapset creator to beatmap
+                // Map API field names to database column names
+                od: bm.accuracy,  // accuracy -> od (Overall Difficulty)
+                hp: bm.drain      // drain -> hp (HP Drain)
             };
             await db.insertBeatmap(mappedBeatmap);
         }
@@ -248,10 +287,13 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
             await db.markBeatmapsetDownloaded(rawBeatmapset.id, true);
         } catch (dlErr) {
             // If download fails, mark as missing_audio
-            console.warn(`Download failed for beatmapset ${rawBeatmapset.id}:`, dlErr instanceof Error ? dlErr.message : dlErr);
+            console.warn(chalk.yellow(`Download failed for beatmapset ${rawBeatmapset.id}:`), dlErr instanceof Error ? dlErr.message : dlErr);
             beatmapset.missing_audio = true;
             await db.markBeatmapsetMissingAudio(rawBeatmapset.id, true);
         }
+    } else if (isMissingAudioFromAPI && isMissingAudioFromDB) {
+        // Skip download - API confirms audio is still unavailable
+        console.log(chalk.gray(`Skipped download for beatmapset ${rawBeatmapset.id} (audio unavailable)`));
     }
 
     // Always mark as not deleted since API returned it
@@ -295,9 +337,9 @@ export async function fetchBeatmapsetFromOsu(id: number): Promise<any> {
             const exists = await db.beatmapsetExists(id);
             if (exists) {
                 await db.markBeatmapsetDeleted(id, true);
-                console.warn(`Beatmapset ${id} not found → marked as deleted in DB`);
+                console.warn(chalk.yellow(`Beatmapset ${id} not found → marked as deleted in DB`));
             } else {
-                console.warn(`Beatmapset ${id} not found and not in DB`);
+                console.log(chalk.gray(`Beatmapset ${id} not found and not in DB`));
             }
             return null;
         }
@@ -305,13 +347,13 @@ export async function fetchBeatmapsetFromOsu(id: number): Promise<any> {
         // Only process ranked, loved, or approved maps
         const status = String(rawBeatmapset.status);
         if (status !== 'ranked' && status !== 'loved' && status !== 'approved') {
-            console.log(chalk.yellow(`Skipping beatmapset ${id} (status: ${status})`));
+            console.log(chalk.gray(`Skipping beatmapset ${id} (status: ${status})`));
             return null;
         }
 
         return await processBeatmapset(rawBeatmapset);
     } catch (err) {
-        console.error(`Failed to fetch beatmapset ${id}:`, err instanceof Error ? err.message : err);
+        console.error(chalk.red(`Failed to fetch beatmapset ${id}:`), err instanceof Error ? err.message : err);
         return null;
     }
 }
@@ -329,7 +371,7 @@ export async function refreshAllBeatmapsetsFromOsu(): Promise<void> {
         const ids = res.rows.map(r => Number(r.id));
         client.release();
 
-        console.log(`Refreshing ${ids.length} beatmapsets from osu API...`);
+        console.log(chalk.cyan(`Refreshing ${ids.length} beatmapsets from osu! API...`));
         
         // Process in batches of 50 (osu! API's maximum batch size)
         for (let i = 0; i < ids.length; i += 50) {
@@ -346,7 +388,7 @@ export async function refreshAllBeatmapsetsFromOsu(): Promise<void> {
                     const promises = chunk.map(id => 
                         osuApiInstance.getBeatmapset(id)
                             .catch((err: unknown) => {
-                                console.warn(`Failed to fetch beatmapset ${id}:`, err instanceof Error ? err.message : err);
+                                console.warn(chalk.yellow(`Failed to fetch beatmapset ${id}:`), err instanceof Error ? err.message : err);
                                 return null;
                             })
                     );
@@ -373,18 +415,18 @@ export async function refreshAllBeatmapsetsFromOsu(): Promise<void> {
                     } else {
                         // If not in batch response, it's deleted
                         await db.markBeatmapsetDeleted(id, true);
-                        console.warn(`Beatmapset ${id} not found → marked as deleted in DB`);
+                        console.warn(chalk.yellow(`Beatmapset ${id} not found → marked as deleted`));
                     }
                 }
             } catch (err) {
-                console.error(`Failed to process batch ${Math.floor(i / 50) + 1}:`, err instanceof Error ? err.message : err);
+                console.error(chalk.red(`Failed to process batch ${Math.floor(i / 50) + 1}:`), err instanceof Error ? err.message : err);
             }
             
-            console.log(`Processed batch ${Math.floor(i / 50) + 1} of ${Math.ceil(ids.length / 50)} (IDs ${batchIds[0]}-${batchIds[batchIds.length - 1]})`);
+            console.log(chalk.gray(`Processed batch ${Math.floor(i / 50) + 1}/${Math.ceil(ids.length / 50)} (IDs ${batchIds[0]}-${batchIds[batchIds.length - 1]})`));
         }
 
-        console.log("Finished refreshing all beatmapsets.");
+        console.log(chalk.green("Finished refreshing all beatmapsets"));
     } catch (err) {
-        console.error("Error in refreshAllBeatmapsetsFromOsu:", err instanceof Error ? err.message : err);
+        console.error(chalk.red("Error in refreshAllBeatmapsetsFromOsu:"), err instanceof Error ? err.message : err);
     }
 }

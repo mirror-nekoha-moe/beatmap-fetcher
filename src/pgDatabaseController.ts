@@ -11,6 +11,7 @@ interface DatabaseStats {
     loved_count: number;
     graveyard_count: number;
     pending_count: number;
+    total_size: number;
 }
 
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -98,9 +99,9 @@ async function insertBeatmapset(beatmapset: any): Promise<void> {
 				bpm,
 				submitted, updated, ranked, loved, approved,
 				genre_id, language_id,
-				missing_audio, deleted, downloaded
+				missing_audio, deleted, downloaded, file_size
 			) VALUES (
-				$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26
+				$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27
 			)
 			ON CONFLICT (id) DO UPDATE SET
 				status = EXCLUDED.status,
@@ -127,7 +128,8 @@ async function insertBeatmapset(beatmapset: any): Promise<void> {
 				language_id = EXCLUDED.language_id,
 				missing_audio = EXCLUDED.missing_audio,
 				deleted = EXCLUDED.deleted,
-				downloaded = EXCLUDED.downloaded
+				downloaded = EXCLUDED.downloaded,
+				file_size = EXCLUDED.file_size
 			`, [
 				beatmapset.id, beatmapset.status, 
 				beatmapset.title, beatmapset.title_unicode,
@@ -142,7 +144,8 @@ async function insertBeatmapset(beatmapset: any): Promise<void> {
 				beatmapset.genre?.id, beatmapset.language?.id,
 				beatmapset.availability?.download_disabled ?? false,
 				beatmapset.deleted ?? false,
-				beatmapset.downloaded ?? false
+				beatmapset.downloaded ?? false,
+				beatmapset.file_size ?? null
 			]
 		);
 	} catch (err) {
@@ -247,7 +250,8 @@ async function updateStats(): Promise<DatabaseStats | null> {
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = 2) AS approved_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = 4) AS loved_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = -2) AS graveyard_count,
-				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status IN (-1,0,3)) AS pending_count;
+				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status IN (-1,0,3)) AS pending_count,
+				(SELECT COALESCE(SUM(file_size), 0) FROM public.${tableBeatmapset} WHERE downloaded = true AND file_size IS NOT NULL) AS total_size;
 		`);
 	  
 		const stats = res.rows[0];
@@ -262,7 +266,8 @@ async function updateStats(): Promise<DatabaseStats | null> {
 				approved_count = $5,
 				loved_count = $6,
 				graveyard_count = $7,
-				pending_count = $8
+				pending_count = $8,
+				total_size = $9
 		`, [
 		  stats.last_beatmapset_id,
 		  stats.beatmapset_count,
@@ -271,7 +276,8 @@ async function updateStats(): Promise<DatabaseStats | null> {
 		  stats.approved_count,
 		  stats.loved_count,
 		  stats.graveyard_count,
-		  stats.pending_count
+		  stats.pending_count,
+		  stats.total_size
 		]);
 		return stats;
 	} catch (err) {

@@ -69,7 +69,8 @@ export const schema = {
             "language_id" SMALLINT NULL DEFAULT NULL,
             "missing_audio" BOOLEAN NULL DEFAULT NULL,
             "deleted" BOOLEAN NULL DEFAULT NULL,
-            "downloaded" BOOLEAN NULL DEFAULT NULL
+            "downloaded" BOOLEAN NULL DEFAULT NULL,
+            "file_size" BIGINT NULL DEFAULT NULL
         );
 
         CREATE INDEX IF NOT EXISTS idx_beatmapset_status ON public.${process.env.TABLE_BEATMAPSET} (status);
@@ -90,7 +91,8 @@ export const schema = {
             approved_count bigint NULL DEFAULT 0,
             loved_count bigint NULL DEFAULT 0,
             graveyard_count bigint NULL DEFAULT 0,
-            pending_count bigint NULL DEFAULT 0
+            pending_count bigint NULL DEFAULT 0,
+            total_size bigint NULL DEFAULT 0
         );
         ALTER TABLE public.${process.env.TABLE_STATS} OWNER TO ${process.env.PG_USERNAME};
     `,

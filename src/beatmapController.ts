@@ -107,7 +107,7 @@ export async function getDownloadUrl(beatmapsetId: number): Promise<string> {
     });
 }
 
-export async function downloadBeatmapSet(url: string, beatmapsetId: number): Promise<string> {
+export async function downloadBeatmapSet(url: string, beatmapsetId: number): Promise<{ filePath: string; fileSize: number }> {
     // Create the beatmapset folder
     const folderPath = path.join(basePath, String(beatmapsetId));
     fs.mkdirSync(folderPath, { recursive: true });
@@ -136,8 +136,12 @@ export async function downloadBeatmapSet(url: string, beatmapsetId: number): Pro
     const readableStream = Readable.fromWeb(response.body as any);
     await pipeline(readableStream, fileStream);
 
-    console.log(chalk.cyan("Downloaded:" + chalk.whiteBright(filePath)));
-    return filePath;
+    // Get file size in bytes
+    const stats = fs.statSync(filePath);
+    const fileSize = stats.size;
+
+    console.log(chalk.cyan(`Downloaded: ${chalk.whiteBright(filePath)} (${chalk.whiteBright((fileSize / (1024 * 1024)).toFixed(2))} MB)`));
+    return { filePath, fileSize };
 }
 
 export async function findNextHighestBeatmapset(currentHighestId: number): Promise<number> {
@@ -257,7 +261,8 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
         mania: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'mania').length ?? 0,
         deleted: isDeleted,
         downloaded: downloadedState,             // Use corrected state
-        missing_audio: isMissingAudioFromAPI     // Use API status for missing_audio
+        missing_audio: isMissingAudioFromAPI,    // Use API status for missing_audio
+        file_size: dbRow?.file_size ?? null      // Preserve existing file_size from DB (API doesn't provide this)
     };
     
     // Insert or update beatmapset
@@ -283,7 +288,12 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
     if (needDownload && !beatmapset.missing_audio) {
         try {
             const downloadUrl = await getDownloadUrl(rawBeatmapset.id);
-            await downloadBeatmapSet(downloadUrl, rawBeatmapset.id);
+            const { filePath, fileSize } = await downloadBeatmapSet(downloadUrl, rawBeatmapset.id);
+            
+            // Update beatmapset with file size
+            beatmapset.file_size = fileSize;
+            await db.insertBeatmapset(beatmapset);
+            
             await db.markBeatmapsetDownloaded(rawBeatmapset.id, true);
         } catch (dlErr) {
             // If download fails, mark as missing_audio
@@ -294,6 +304,20 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
     } else if (isMissingAudioFromAPI && isMissingAudioFromDB) {
         // Skip download - API confirms audio is still unavailable
         console.log(chalk.gray(`Skipped download for beatmapset ${rawBeatmapset.id} (audio unavailable)`));
+    } else if (fileExistsOnDisk && (!dbRow?.file_size || dbRow.file_size === null)) {
+        // File exists but we don't have size recorded - get it from disk
+        try {
+            const files = fs.readdirSync(folderPath).filter(file => file.endsWith('.osz'));
+            if (files.length > 0) {
+                const filePath = path.join(folderPath, files[0]);
+                const stats = fs.statSync(filePath);
+                beatmapset.file_size = stats.size;
+                await db.insertBeatmapset(beatmapset);
+                console.log(chalk.blue(`Updated file size for beatmapset ${rawBeatmapset.id}: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`));
+            }
+        } catch (err) {
+            // Ignore errors reading file size
+        }
     }
 
     // Always mark as not deleted since API returned it
@@ -378,8 +402,8 @@ export async function refreshAllBeatmapsetsFromOsu(): Promise<void> {
             const batchIds = ids.slice(i, i + 50);
             
             try {
-                // Fetch beatmapsets with optimal concurrency for rate limit
-                const concurrencyLimit = 15; // 15 requests at a time (well within 1200/min limit)
+                // Fetch beatmapsets with safe concurrency for rate limit (1200/min = 20/sec, target 600/min = 10/sec)
+                const concurrencyLimit = 10; // 10 requests at a time
                 const beatmapsets = [];
                 
                 // Process in chunks optimized for rate limit
@@ -396,8 +420,8 @@ export async function refreshAllBeatmapsetsFromOsu(): Promise<void> {
                     const results = await Promise.all(promises);
                     beatmapsets.push(...results);
                     
-                    // Small delay between chunks (allows ~900 requests/min, well under limit)
-                    await new Promise(resolve => setTimeout(resolve, 50));
+                    // Delay between chunks: 10 requests per second = 600 requests/min (50% of 1200/min limit)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
                 
                 // Create a map of successfully retrieved beatmapsets

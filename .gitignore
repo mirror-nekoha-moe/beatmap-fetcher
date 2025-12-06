@@ -1,0 +1,8 @@
+/.vs
+/out
+/node_modules
+/src
+/storage
+/dist
+/src/.env.production
+/src/.env.development

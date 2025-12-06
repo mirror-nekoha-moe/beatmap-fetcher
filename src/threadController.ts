@@ -36,6 +36,14 @@ async function thControllerMain(): Promise<void> {
             process.exit(1);
         });
         console.log(chalk.green("Started continuouslyFetchNewBeatmapsets() loop"));
+
+        // Start continuous loop to scan recently ranked beatmapsets
+        // This catches old maps that got ranked late (every hour)
+        thHelper.continuouslyScanRecentlyRanked().catch(err => {
+            console.error(chalk.red("Recently ranked scan loop crashed:"), err instanceof Error ? err.message : err);
+            process.exit(1);
+        });
+        console.log(chalk.green("Started continuouslyScanRecentlyRanked() loop"));
     } catch (err) {
         console.error(chalk.red("threadControllerMain encountered an error:"), err instanceof Error ? err.message : err);
         process.exit(1);

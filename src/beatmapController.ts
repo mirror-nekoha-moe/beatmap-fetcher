@@ -149,7 +149,7 @@ export async function findNextHighestBeatmapset(currentHighestId: number): Promi
         await osuAuthenticate();
     }
 
-    const step = 10000; // How many sequential IDs to check
+    let step = 10000; // How many sequential IDs to check
     let newHighest = currentHighestId;
     let foundAny = false;
 
@@ -452,5 +452,69 @@ export async function refreshAllBeatmapsetsFromOsu(): Promise<void> {
         console.log(chalk.green("Finished refreshing all beatmapsets"));
     } catch (err) {
         console.error(chalk.red("Error in refreshAllBeatmapsetsFromOsu:"), err instanceof Error ? err.message : err);
+    }
+}
+/**
+ * Scan recently ranked/loved beatmapsets to catch old maps that got ranked late
+ * Uses v1 API to get maps ranked in last 7 days by date
+ */
+export async function scanRecentlyRankedBeatmapsets(): Promise<void> {
+    try {
+        console.log(chalk.cyan("Scanning recently ranked beatmapsets (last 14 days)..."));
+
+        const today = new Date();
+        // Go back 14 days
+        for (let offset = 0; offset < 14; offset++) {
+            const day = new Date(today);
+            day.setDate(today.getDate() - offset);
+            // Format as YYYY-MM-DD 00:00:00
+            const sinceDate = day.toISOString().slice(0, 10) + " 00:00:00";
+
+            try {
+                const url = `https://osu.ppy.sh/api/get_beatmaps?k=${process.env.OSU_API_V1_KEY}&since=${encodeURIComponent(sinceDate)}&limit=500`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(chalk.red(`v1 API returned ${response.status}: ${response.statusText}`));
+                }
+
+                const beatmaps = await response.json();
+                if (!Array.isArray(beatmaps)) {
+                    throw new Error("API response is not an array");
+                }
+                console.log(chalk.cyan(`Day ${sinceDate}: Found ${beatmaps.length} Beatmaps from v1 API`));
+
+                // Group beatmaps by beatmapset_id, only numeric IDs
+                const beatmapsetIds = new Set<number>();
+                for (const beatmap of beatmaps) {
+                    const id = Number(beatmap.beatmapset_id);
+                    if (Number.isFinite(id)) {
+                        beatmapsetIds.add(id);
+                    }
+                }
+
+                console.log(chalk.cyan(`Day ${sinceDate}: Found ${beatmapsetIds.size} unique beatmapsets`));
+
+                // Process each beatmapset
+                for (const beatmapsetId of beatmapsetIds) {
+                    // Check if we already have this beatmapset
+                    const exists = await db.beatmapsetExists(beatmapsetId);
+
+                    if (!exists) {
+                        console.log(chalk.yellow(`Found missing beatmapset: ${beatmapsetId}`));
+                        await fetchBeatmapsetFromOsu(beatmapsetId);
+                    }
+
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            } catch (err) {
+                console.error(chalk.red(`Failed to scan beatmapsets for day ${sinceDate}:`), err instanceof Error ? err.message : err);
+            }
+        }
+
+        console.log(chalk.green("Finished scanning recently ranked beatmapsets (last 14 days)"));
+    } catch (err) {
+        console.error(chalk.red("Error in scanRecentlyRankedBeatmapsets:"), err instanceof Error ? err.message : err);
     }
 }

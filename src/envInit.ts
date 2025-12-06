@@ -1,12 +1,13 @@
 import path from 'path';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
 
 export function checkEnvVariables(): void {
     console.log("Checking Environment variables...");
     const requiredEnvVars = [
         // OSU API
+        'OSU_API_V1_KEY',
         'OSU_API_CLIENT_ID',
         'OSU_API_CLIENT_SECRET',
 

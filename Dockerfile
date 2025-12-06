@@ -28,7 +28,7 @@ RUN rm -rf /app/src/cookies && mkdir -p /app/src/cookies
 RUN npm run build
 
 # Copy .env file to dist directory for runtime
-RUN cp -r /app/src/.env /app/dist/.env 2>/dev/null || echo ".env will be loaded from volume"
+RUN cp -r /app/src/.env.production /app/dist/.env 2>/dev/null || echo ".env.production will be loaded from volume"
 
 # Create storage directory
 RUN mkdir -p /app/storage

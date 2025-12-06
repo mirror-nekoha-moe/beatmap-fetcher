@@ -2,19 +2,7 @@ import { Pool } from 'pg';
 import path from 'path';
 import dotenv from 'dotenv';
 
-interface DatabaseStats {
-    last_beatmapset_id: number;
-    beatmapset_count: number;
-    beatmap_count: number;
-    ranked_count: number;
-    approved_count: number;
-    loved_count: number;
-    graveyard_count: number;
-    pending_count: number;
-    total_size: number;
-}
-
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
 
 const pool = new Pool({
     host: process.env.PG_HOSTNAME,
@@ -224,6 +212,33 @@ interface DatabaseStats {
     loved_count: number;
     graveyard_count: number;
     pending_count: number;
+	total_size: number;
+	bm_ranked_count: number;
+	bm_approved_count: number;
+	bm_loved_count: number;
+	bm_graveyard_count: number;
+	bm_pending_count: number;
+	missing_beatmapsets: number;
+	osu_bm_ranked_count: number;
+	osu_bm_approved_count: number;
+	osu_bm_loved_count: number;
+	osu_bm_graveyard_count: number;
+	osu_bm_pending_count: number;
+	taiko_bm_ranked_count: number;
+	taiko_bm_approved_count: number;
+	taiko_bm_loved_count: number;
+	taiko_bm_graveyard_count: number;
+	taiko_bm_pending_count: number;
+	fruits_bm_ranked_count: number;
+	fruits_bm_approved_count: number;
+	fruits_bm_loved_count: number;
+	fruits_bm_graveyard_count: number;
+	fruits_bm_pending_count: number;
+	mania_bm_ranked_count: number;
+	mania_bm_approved_count: number;
+	mania_bm_loved_count: number;
+	mania_bm_graveyard_count: number;
+	mania_bm_pending_count: number;
 }
 
 async function updateStats(): Promise<DatabaseStats | null> {
@@ -251,8 +266,38 @@ async function updateStats(): Promise<DatabaseStats | null> {
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = 4) AS loved_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status = -2) AS graveyard_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE status IN (-1,0,3)) AS pending_count,
-				(SELECT COALESCE(SUM(file_size), 0) FROM public.${tableBeatmapset} WHERE downloaded = true AND file_size IS NOT NULL) AS total_size;
-		`);
+				(SELECT COALESCE(SUM(file_size), 0) FROM public.${tableBeatmapset} WHERE downloaded = true AND file_size IS NOT NULL) AS total_size,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 1) AS bm_ranked_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 2) AS bm_approved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 4) AS bm_loved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = -2) AS bm_graveyard_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status IN (-1,0,3)) AS bm_pending_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE missing_audio = true) AS missing_beatmapsets,
+
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 1 AND mode = 0) AS osu_bm_ranked_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 2 AND mode = 0) AS osu_bm_approved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 4 AND mode = 0) AS osu_bm_loved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = -2 AND mode = 0) AS osu_bm_graveyard_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status IN (-1,0,3) AND mode = 0) AS osu_bm_pending_count,
+
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 1 AND mode = 1) AS taiko_bm_ranked_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 2 AND mode = 1) AS taiko_bm_approved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 4 AND mode = 1) AS taiko_bm_loved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = -2 AND mode = 1) AS taiko_bm_graveyard_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status IN (-1,0,3) AND mode = 1) AS taiko_bm_pending_count,
+
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 1 AND mode = 2) AS fruits_bm_ranked_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 2 AND mode = 2) AS fruits_bm_approved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 4 AND mode = 2) AS fruits_bm_loved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = -2 AND mode = 2) AS fruits_bm_graveyard_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status IN (-1,0,3) AND mode = 2) AS fruits_bm_pending_count,
+
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 1 AND mode = 3) AS mania_bm_ranked_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 2 AND mode = 3) AS mania_bm_approved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 4 AND mode = 3) AS mania_bm_loved_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = -2 AND mode = 3) AS mania_bm_graveyard_count,
+				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status IN (-1,0,3) AND mode = 3) AS mania_bm_pending_count;
+			`);
 	  
 		const stats = res.rows[0];
 	  
@@ -267,17 +312,78 @@ async function updateStats(): Promise<DatabaseStats | null> {
 				loved_count = $6,
 				graveyard_count = $7,
 				pending_count = $8,
-				total_size = $9
-		`, [
-		  stats.last_beatmapset_id,
-		  stats.beatmapset_count,
-		  stats.beatmap_count,
-		  stats.ranked_count,
-		  stats.approved_count,
-		  stats.loved_count,
-		  stats.graveyard_count,
-		  stats.pending_count,
-		  stats.total_size
+				total_size = $9,
+				bm_ranked_count = $10,
+				bm_approved_count = $11,
+				bm_loved_count = $12,
+				bm_graveyard_count = $13,
+				bm_pending_count = $14,
+				missing_beatmapsets = $15,
+
+				osu_bm_ranked_count = $16,
+				osu_bm_approved_count = $17,
+				osu_bm_loved_count = $18,
+				osu_bm_graveyard_count = $19,
+				osu_bm_pending_count = $20,
+
+				taiko_bm_ranked_count = $21,
+				taiko_bm_approved_count = $22,
+				taiko_bm_loved_count = $23,
+				taiko_bm_graveyard_count = $24,
+				taiko_bm_pending_count = $25,
+
+				fruits_bm_ranked_count = $26,
+				fruits_bm_approved_count = $27,
+				fruits_bm_loved_count = $28,
+				fruits_bm_graveyard_count = $29,
+				fruits_bm_pending_count = $30,
+
+				mania_bm_ranked_count = $31,
+				mania_bm_approved_count = $32,
+				mania_bm_loved_count = $33,
+				mania_bm_graveyard_count = $34,
+				mania_bm_pending_count = $35
+		`, 
+		[
+			stats.last_beatmapset_id,
+			stats.beatmapset_count,
+			stats.beatmap_count,
+			stats.ranked_count,
+			stats.approved_count,
+			stats.loved_count,
+			stats.graveyard_count,
+			stats.pending_count,
+			stats.total_size,
+			stats.bm_ranked_count,
+			stats.bm_approved_count,
+			stats.bm_loved_count,
+			stats.bm_graveyard_count,
+			stats.bm_pending_count,
+			stats.missing_beatmapsets,
+
+			stats.osu_bm_ranked_count,
+			stats.osu_bm_approved_count,
+			stats.osu_bm_loved_count,
+			stats.osu_bm_graveyard_count,
+			stats.osu_bm_pending_count,
+
+			stats.taiko_bm_ranked_count,
+			stats.taiko_bm_approved_count,
+			stats.taiko_bm_loved_count,
+			stats.taiko_bm_graveyard_count,
+			stats.taiko_bm_pending_count,
+
+			stats.fruits_bm_ranked_count,
+			stats.fruits_bm_approved_count,
+			stats.fruits_bm_loved_count,
+			stats.fruits_bm_graveyard_count,
+			stats.fruits_bm_pending_count,
+
+			stats.mania_bm_ranked_count,
+			stats.mania_bm_approved_count,
+			stats.mania_bm_loved_count,
+			stats.mania_bm_graveyard_count,
+			stats.mania_bm_pending_count
 		]);
 		return stats;
 	} catch (err) {
@@ -324,6 +430,34 @@ async function markBeatmapsetMissingAudio(id: number, missingAudio: boolean = tr
     }
 }
 
+async function getScanCursor(): Promise<number> {
+    const client = await pool.connect();
+    try {
+        const tableStats = process.env.TABLE_STATS;
+        // Ensure stats row exists
+        await client.query(`
+            INSERT INTO public.${tableStats} (scan_cursor)
+            SELECT 0
+            WHERE NOT EXISTS (SELECT 1 FROM public.${tableStats});
+        `);
+        
+        const res = await client.query(`SELECT scan_cursor FROM public.${tableStats} LIMIT 1`);
+        return res.rows[0]?.scan_cursor || 0;
+    } finally {
+        client.release();
+    }
+}
+
+async function updateScanCursor(cursor: number): Promise<void> {
+    const client = await pool.connect();
+    try {
+        const tableStats = process.env.TABLE_STATS;
+        await client.query(`UPDATE public.${tableStats} SET scan_cursor = $1`, [cursor]);
+    } finally {
+        client.release();
+    }
+}
+
 export {
 	insertBeatmap,
 	insertBeatmapset,
@@ -334,5 +468,7 @@ export {
 	getBeatmapsetById,
 	markBeatmapsetDeleted,
 	markBeatmapsetDownloaded,
-    markBeatmapsetMissingAudio
+    markBeatmapsetMissingAudio,
+    getScanCursor,
+    updateScanCursor
 };

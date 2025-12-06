@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { Pool, PoolClient } from 'pg';
 import { schema } from './pgDatabaseModel';
 
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
 
 interface PrimaryKey {
     table: string;

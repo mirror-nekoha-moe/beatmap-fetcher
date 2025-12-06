@@ -1,7 +1,12 @@
+/*
+    THIS FILE DEFINES THE DATABASE STRUCTURE
+    MODIFY THIS FILE TO ADD TABLES OR COLUMNS
+*/
+
 import path from 'path';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
 
 export const schema = {
     table_beatmap: `
@@ -92,7 +97,34 @@ export const schema = {
             loved_count bigint NULL DEFAULT 0,
             graveyard_count bigint NULL DEFAULT 0,
             pending_count bigint NULL DEFAULT 0,
-            total_size bigint NULL DEFAULT 0
+            total_size bigint NULL DEFAULT 0,
+            scan_cursor bigint NULL DEFAULT 0,
+            bm_ranked_count bigint NULL DEFAULT 0,
+            bm_approved_count bigint NULL DEFAULT 0,
+            bm_loved_count bigint NULL DEFAULT 0,
+            bm_graveyard_count bigint NULL DEFAULT 0,
+            bm_pending_count bigint NULL DEFAULT 0,
+            missing_beatmapsets bigint NULL DEFAULT 0,
+            osu_bm_ranked_count bigint NULL DEFAULT 0,
+			osu_bm_approved_count bigint NULL DEFAULT 0,
+			osu_bm_loved_count bigint NULL DEFAULT 0,
+			osu_bm_graveyard_count bigint NULL DEFAULT 0,
+			osu_bm_pending_count bigint NULL DEFAULT 0,
+			taiko_bm_ranked_count bigint NULL DEFAULT 0,
+			taiko_bm_approved_count bigint NULL DEFAULT 0,
+			taiko_bm_loved_count bigint NULL DEFAULT 0,
+			taiko_bm_graveyard_count bigint NULL DEFAULT 0,
+			taiko_bm_pending_count bigint NULL DEFAULT 0,
+			fruits_bm_ranked_count bigint NULL DEFAULT 0,
+			fruits_bm_approved_count bigint NULL DEFAULT 0,
+			fruits_bm_loved_count bigint NULL DEFAULT 0,
+			fruits_bm_graveyard_count bigint NULL DEFAULT 0,
+			fruits_bm_pending_count bigint NULL DEFAULT 0,
+			mania_bm_ranked_count bigint NULL DEFAULT 0,
+			mania_bm_approved_count bigint NULL DEFAULT 0,
+			mania_bm_loved_count bigint NULL DEFAULT 0,
+			mania_bm_graveyard_count bigint NULL DEFAULT 0,
+			mania_bm_pending_count bigint NULL DEFAULT 0
         );
         ALTER TABLE public.${process.env.TABLE_STATS} OWNER TO ${process.env.PG_USERNAME};
     `,

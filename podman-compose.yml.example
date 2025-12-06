@@ -1,0 +1,24 @@
+services:
+  # Beatmap Fetcher Service
+  # Modify variables to your likeness
+  beatmap-fetcher:
+    build:
+      context: ./beatmap-fetcher
+      dockerfile: Dockerfile
+    container_name: beatmap-fetcher
+    restart: always
+    env_file:
+      - ./beatmap-fetcher/src/.env.production
+    volumes:
+      - ./beatmap-fetcher/storage:/app/storage:Z
+      - osu-cookies:/app/src/cookies:Z
+    networks:
+      - mirror-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      cookie-fetcher:
+        condition: service_started
+    security_opt:
+      - label=disable
+

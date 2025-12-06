@@ -1,0 +1,39 @@
+{
+  "name": "beatmap-fetcher",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "NODE_ENV=production node dist/index.js",
+    "dev": "NODE_ENV=development ts-node src/index.ts",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "build:watch": "tsc --watch"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "dotenv": "^17.2.3",
+    "node-libcurl": "^4.1.0",
+    "osu-api-v2-js": "^2.1.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "@types/node-fetch": "^2.6.13",
+    "@types/pg": "^8.15.6",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mirror-nekoha-moe/beatmap-fetcher.git"
+  },
+  "author": "nyaruku",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mirror-nekoha-moe/beatmap-fetcher/issues"
+  },
+  "homepage": "https://github.com/mirror-nekoha-moe/beatmap-fetcher#readme"
+}

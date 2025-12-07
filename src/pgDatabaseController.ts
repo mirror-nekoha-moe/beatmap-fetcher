@@ -73,6 +73,32 @@ async function insertBeatmap(beatmap: any): Promise<void> {
 	}
 }
 
+async function getMissingBeatmapsets() {
+	const table = process.env.TABLE_BEATMAPSET;
+	const client = await pool.connect();
+	try {
+		const res = await client.query(
+			`SELECT id FROM public.${table} WHERE downloaded = false ORDER BY id ASC`
+		);
+		return res.rows;
+	} finally {
+		client.release();
+	}
+}
+
+async function getMissingMetadata() {
+	const table = process.env.TABLE_BEATMAPSET;
+	const client = await pool.connect();
+	try {
+		const res = await client.query(
+			`SELECT id FROM public.${table} WHERE user_id IS NULL ORDER BY id ASC`
+		);
+		return res.rows;
+	} finally {
+		client.release();
+	}
+}
+
 // Insert or update a beatmapset row
 async function insertBeatmapset(beatmapset: any): Promise<void> {
 	const table = process.env.TABLE_BEATMAPSET;
@@ -269,7 +295,7 @@ async function updateStats(): Promise<DatabaseStats | null> {
 				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 4) AS bm_loved_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = -2) AS bm_graveyard_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status IN (-1,0,3)) AS bm_pending_count,
-				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE missing_audio = true) AS missing_beatmapsets,
+				(SELECT COUNT(*) FROM public.${tableBeatmapset} WHERE downloaded = false) AS missing_beatmapsets,
 
 				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 1 AND mode = 0) AS osu_bm_ranked_count,
 				(SELECT COUNT(*) FROM public.${tableBeatmap} WHERE status = 2 AND mode = 0) AS osu_bm_approved_count,
@@ -467,5 +493,7 @@ export {
 	markBeatmapsetDownloaded,
     markBeatmapsetMissingAudio,
     getScanCursor,
-    updateScanCursor
+    updateScanCursor,
+	getMissingBeatmapsets,
+	getMissingMetadata
 };

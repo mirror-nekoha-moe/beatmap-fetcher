@@ -44,6 +44,14 @@ async function thControllerMain(): Promise<void> {
             process.exit(1);
         });
         console.log(chalk.green("Started continuouslyScanRecentlyRanked() loop"));
+
+        // This checks and updates not downloaded beatmapsets, but are inside the database (every hour)
+        thHelper.scanMissingMapsThreadWrapper().catch(err => {
+            console.error(chalk.red("Missing sets scan loop crashed:"), err instanceof Error ? err.message : err);
+            process.exit(1);
+        });
+        console.log(chalk.green("Started scanMissingMapsThreadWrapper() loop"));
+
     } catch (err) {
         console.error(chalk.red("threadControllerMain encountered an error:"), err instanceof Error ? err.message : err);
         process.exit(1);

@@ -2,6 +2,11 @@ import * as db from './pgDatabaseController';
 import { config } from './config';
 import * as beatmapController from './beatmapController';
 import chalk from 'chalk';
+import fs from 'fs';
+import path from 'path';
+import fetch from 'node-fetch';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
 
 export async function fetchHighestKnownBeatmapsetId(): Promise<number> {
     try {
@@ -88,6 +93,105 @@ export async function continuouslyScanRecentlyRanked(): Promise<void> {
             await new Promise(resolve => setTimeout(resolve, 60 * 60 * 1000));
         } catch (err) {
             console.error(chalk.red('Error in recently ranked scan loop:'), err instanceof Error ? err.message : err);
+            // Wait 10 minutes on error before retrying
+            console.log(chalk.yellow('Waiting 10 minutes before retrying...'));
+            await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000));
+        }
+    }
+}
+
+// INTERNAL HELPER FUNCTIONS FOR MISSING SET SCANNER 
+// Checks if .osz file exists for a beatmapset
+function fileExistsForBeatmapset(beatmapsetId: number): string | null {
+    const folderPath = path.resolve(String(process.env.STORAGE_DIR), String(beatmapsetId));
+    console.log(chalk.blue(`[DEBUG] Checking folder: ${folderPath}`));
+    if (!fs.existsSync(folderPath)) {
+        console.log(chalk.yellow(`[DEBUG] Folder does not exist: ${folderPath}`));
+        return null;
+    }
+    const files = fs.readdirSync(folderPath);
+    const fullPaths = files.map(f => path.join(folderPath, f));
+    console.log(chalk.blue(`[DEBUG] Files in folder: ${JSON.stringify(fullPaths)}`));
+    const oszFiles = fullPaths.filter(f => f.endsWith('.osz'));
+    if (oszFiles.length === 0) {
+        console.log(chalk.yellow(`[DEBUG] No .osz files found in: ${folderPath}`));
+        return null;
+    }
+    return oszFiles[0];
+}
+
+async function updateDbAfterDownload(beatmapsetId: number, filePath: string) {
+    try {
+        const stats = fs.statSync(filePath);
+        await db.markBeatmapsetDownloaded(beatmapsetId, true);
+        // Fallback: update file_size using insertBeatmapset (if available)
+        if (db.insertBeatmapset) {
+            await db.insertBeatmapset({ id: beatmapsetId, file_size: stats.size, downloaded: true });
+        }
+        console.log(chalk.green(`Marked downloaded and updated file size for beatmapset ${beatmapsetId}`));
+    } catch (err) {
+        console.error(chalk.red(`Failed to update DB for ${beatmapsetId}:`), err);
+    }
+}
+
+async function scanMissingMaps() {
+    const missing = await db.getMissingBeatmapsets();
+    console.log(chalk.cyan(`Found ${missing.length} missing beatmapsets`));
+        let fixed = 0;
+        for (const beatmapset of missing) {
+            const filePath = fileExistsForBeatmapset(beatmapset.id);
+            if (filePath) {
+                await updateDbAfterDownload(beatmapset.id, filePath);
+                fixed++;
+            } else {
+                console.log(chalk.gray(`No file found for beatmapset ${beatmapset.id}`));
+            }
+        }
+    console.log(chalk.green(`Done rechecking missing maps. Fixed ${fixed} beatmapsets.`));
+}
+
+export async function scanMissingMapsThreadWrapper(): Promise<void> {
+    console.log(chalk.cyan("Starting to scan missing beatmapsets..."));
+    
+    while (true) {
+        try {
+            await scanMissingMaps();
+            // Check every hour for missing sets
+            console.log(chalk.gray("Waiting 24 hour before next missing sets scan..."));
+            await new Promise(resolve => setTimeout(resolve, 24 * 60 * 60 * 1000));
+        } catch (err) {
+            console.error(chalk.red('Error in missing sets scan loop:'), err instanceof Error ? err.message : err);
+            // Wait 10 minutes on error before retrying
+            console.log(chalk.yellow('Waiting 10 minutes before retrying...'));
+            await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000));
+        }
+    }
+}
+
+async function scanMissingMetadata() {
+    const missing = await db.getMissingMetadata();
+    console.log(chalk.cyan(`Found ${missing.length} beatmapsets with missing metadata`));
+        let fixed = 0;
+        for (const beatmapset of missing) {
+            await beatmapController.fetchBeatmapsetFromOsu(beatmapset.id);
+            fixed++;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    console.log(chalk.green(`Done rechecking missing metadata. Fixed ${fixed} beatmapsets.`));
+}
+
+
+export async function scanMissingMetadataThreadWrapper(): Promise<void> {
+    console.log(chalk.cyan("Starting to scan missing metadata..."));
+    
+    while (true) {
+        try {
+            await scanMissingMetadata();
+            // Check every hour for missing metadata
+            console.log(chalk.gray("Waiting 24 hour before next missing metadata scan..."));
+            await new Promise(resolve => setTimeout(resolve, 24 * 60 * 60 * 1000));
+        } catch (err) {
+            console.error(chalk.red('Error in missing metadata scan loop:'), err instanceof Error ? err.message : err);
             // Wait 10 minutes on error before retrying
             console.log(chalk.yellow('Waiting 10 minutes before retrying...'));
             await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000));

@@ -70,6 +70,8 @@ export const schema = {
             "genre_id" SMALLINT NULL DEFAULT NULL,
             "language_id" SMALLINT NULL DEFAULT NULL,
             "missing_audio" BOOLEAN NULL DEFAULT NULL,
+            "dmca" BOOLEAN NULL DEFAULT NULL,
+            "more_information" TEXT NULL DEFAULT NULL,
             "deleted" BOOLEAN NULL DEFAULT NULL,
             "downloaded" BOOLEAN NULL DEFAULT NULL,
             "file_size" BIGINT NULL DEFAULT NULL
@@ -124,5 +126,46 @@ export const schema = {
 			mania_bm_pending_count bigint NULL DEFAULT 0
         );
         ALTER TABLE public.${process.env.TABLE_STATS} OWNER TO ${process.env.PG_USERNAME};
+    `,
+
+
+    table_beatmapset_archive: `
+        CREATE TABLE IF NOT EXISTS public.${process.env.TABLE_BEATMAPSET_ARCHIVE} (
+            "id" BIGINT NOT NULL PRIMARY KEY,
+            "status" SMALLINT NULL DEFAULT NULL,
+            "title" TEXT NULL DEFAULT NULL,
+            "title_unicode" TEXT NULL DEFAULT NULL,
+            "artist" TEXT NULL DEFAULT NULL,
+            "artist_unicode" TEXT NULL DEFAULT NULL,
+            "creator" VARCHAR(30) NULL DEFAULT NULL,
+            "user_id" BIGINT NULL DEFAULT NULL,
+            "source" TEXT NULL DEFAULT NULL,
+            "tags" TEXT NULL DEFAULT NULL,
+            "beatmap_count" SMALLINT NULL DEFAULT NULL,
+            "osu" SMALLINT NULL DEFAULT NULL,
+            "taiko" SMALLINT NULL DEFAULT NULL,
+            "fruits" SMALLINT NULL DEFAULT NULL,
+            "mania" SMALLINT NULL DEFAULT NULL,
+            "bpm" REAL NULL DEFAULT NULL,
+            "submitted" TIMESTAMPTZ NULL DEFAULT NULL,
+            "updated" TIMESTAMPTZ NULL DEFAULT NULL,
+            "ranked" TIMESTAMPTZ NULL DEFAULT NULL,
+            "genre_id" SMALLINT NULL DEFAULT NULL,
+            "language_id" SMALLINT NULL DEFAULT NULL,
+            "missing_audio" BOOLEAN NULL DEFAULT NULL,
+            "dmca" BOOLEAN NULL DEFAULT NULL,
+            "more_information" TEXT NULL DEFAULT NULL,
+            "deleted" BOOLEAN NULL DEFAULT NULL,
+            "downloaded" BOOLEAN NULL DEFAULT NULL,
+            "file_size" BIGINT NULL DEFAULT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_beatmapset_status ON public.${process.env.TABLE_BEATMAPSET_ARCHIVE} (status);
+        CREATE INDEX IF NOT EXISTS idx_beatmapset_artist ON public.${process.env.TABLE_BEATMAPSET_ARCHIVE} (artist);
+        CREATE INDEX IF NOT EXISTS idx_beatmapset_title ON public.${process.env.TABLE_BEATMAPSET_ARCHIVE} (title);
+        CREATE INDEX IF NOT EXISTS idx_beatmapset_creator ON public.${process.env.TABLE_BEATMAPSET_ARCHIVE} (creator);
+        CREATE INDEX IF NOT EXISTS idx_beatmapset_bpm ON public.${process.env.TABLE_BEATMAPSET_ARCHIVE} (bpm);
+
+        ALTER TABLE public.${process.env.TABLE_BEATMAPSET_ARCHIVE} OWNER TO ${process.env.PG_USERNAME};
     `,
 };

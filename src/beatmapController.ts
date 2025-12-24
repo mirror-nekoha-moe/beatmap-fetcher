@@ -10,8 +10,13 @@ import dotenv from 'dotenv';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
+import * as config from './config';
+
+
 const basePath = path.resolve(__dirname, process.env.STORAGE_DIR!);
 const COOKIE_FILE = path.resolve(__dirname, process.env.COOKIE_FILE!);
+let osu_session = "";
+let osuApiInstance: any = null;
 
 const pool = new Pool({
     host: process.env.PG_HOSTNAME,
@@ -52,8 +57,6 @@ const statusMap: Record<string, BeatmapStatus> = {
     approved: BeatmapStatus.Approved,
     loved: BeatmapStatus.Loved
 };
-
-let osu_session = "";
 
 export function readCookie(): void {
     try {
@@ -144,6 +147,25 @@ export async function downloadBeatmapSet(url: string, beatmapsetId: number): Pro
     return { filePath, fileSize };
 }
 
+export async function osuAuthenticate(): Promise<void> {
+    try {
+        console.log(chalk.cyan("Authenticating with osu! API..."));
+        osuApiInstance = await osu.API.createAsync(
+            parseInt(process.env.OSU_API_CLIENT_ID!, 10),
+            process.env.OSU_API_CLIENT_SECRET!
+        );
+        console.log(chalk.green("osu! API authenticated successfully"));
+    } catch (err) {
+        console.error(chalk.red("Failed to authenticate osu! API:"), err instanceof Error ? err.message : err);
+        throw err;
+    }
+}
+
+/*
+ * Map Scanner
+ * Used for initial scrape by incrementing set id
+ * Will be useless in the future once all sets has been fetched -> scanRecentlyRankedBeatmapsets()
+ */
 export async function findNextHighestBeatmapset(currentHighestId: number): Promise<number> {
     if (!osuApiInstance) {
         await osuAuthenticate();
@@ -162,7 +184,7 @@ export async function findNextHighestBeatmapset(currentHighestId: number): Promi
             if (id > currentHighestId + 1) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
-            
+
             const beatmapset = await fetchBeatmapsetFromOsu(id);
             if (beatmapset) {
                 newHighest = id;
@@ -189,22 +211,9 @@ export async function findNextHighestBeatmapset(currentHighestId: number): Promi
     return newHighest;
 }
 
-let osuApiInstance: any = null;
-
-export async function osuAuthenticate(): Promise<void> {
-    try {
-        console.log(chalk.cyan("Authenticating with osu! API..."));
-        osuApiInstance = await osu.API.createAsync(
-            parseInt(process.env.OSU_API_CLIENT_ID!, 10),
-            process.env.OSU_API_CLIENT_SECRET!
-        );
-        console.log(chalk.green("osu! API authenticated successfully"));
-    } catch (err) {
-        console.error(chalk.red("Failed to authenticate osu! API:"), err instanceof Error ? err.message : err);
-        throw err;
-    }
-}
-
+/*
+ * Beatmap processer
+ */
 async function processBeatmapset(rawBeatmapset: any): Promise<any> {
     // Check if we need to re-download and get current state
     const dbRow = await db.getBeatmapsetById(rawBeatmapset.id);
@@ -214,8 +223,16 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
     const isDeleted = !!rawBeatmapset.deleted_at;
     
     // Check if download is disabled (missing audio) from API
-    const isMissingAudioFromAPI = rawBeatmapset.availability?.download_disabled === true;
+    let isMissingAudioFromAPI = rawBeatmapset.availability?.download_disabled === true;
     const isMissingAudioFromDB = dbRow?.missing_audio === true;
+    const isDcmaFromApi = rawBeatmapset.availability?.more_information?.startsWith("http") ?? false;
+    const moreInformation = rawBeatmapset.availability?.more_information ?? "";
+    const isDcmaFromDb = dbRow?.dmca ?? false;
+
+    // Overwrite isMissingAudioFromAPI if dmca is active
+    if (isMissingAudioFromAPI == false && moreInformation.startsWith("http")) {
+        isMissingAudioFromAPI = true;
+    }
 
     // Check if file actually exists on disk
     const folderPath = path.join(basePath, String(rawBeatmapset.id));
@@ -262,6 +279,8 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
         deleted: isDeleted,
         downloaded: downloadedState,             // Use corrected state
         missing_audio: isMissingAudioFromAPI,    // Use API status for missing_audio
+        dmca: isDcmaFromApi,
+        more_information: moreInformation,
         file_size: dbRow?.file_size ?? null      // Preserve existing file_size from DB (API doesn't provide this)
     };
     
@@ -303,7 +322,7 @@ async function processBeatmapset(rawBeatmapset: any): Promise<any> {
         }
     } else if (isMissingAudioFromAPI && isMissingAudioFromDB) {
         // Skip download - API confirms audio is still unavailable
-        console.log(chalk.gray(`Skipped download for beatmapset ${rawBeatmapset.id} (audio unavailable)`));
+        console.log(chalk.gray(`Skipped download for beatmapset ${rawBeatmapset.id} (map or audio unavailable)`));
     } else if (fileExistsOnDisk && (!dbRow?.file_size || dbRow.file_size === null)) {
         // File exists but we don't have size recorded - get it from disk
         try {
@@ -363,15 +382,19 @@ export async function fetchBeatmapsetFromOsu(id: number): Promise<any> {
                 await db.markBeatmapsetDeleted(id, true);
                 console.warn(chalk.yellow(`Beatmapset ${id} not found → marked as deleted in DB`));
             } else {
-                console.log(chalk.gray(`Beatmapset ${id} not found and not in DB`));
+                if (config.debugLogging) {
+                    console.log(chalk.gray(`Beatmapset ${id} not found and not in DB`));
+                }
             }
             return null;
         }
 
         // Only process ranked, loved, or approved maps
         const status = String(rawBeatmapset.status);
-        if (status !== 'ranked' && status !== 'loved' && status !== 'approved') {
-            console.log(chalk.gray(`Skipping beatmapset ${id} (status: ${status})`));
+        if (!config.trackAllMaps && status !== 'ranked' && status !== 'loved' && status !== 'approved') {
+            if (config.debugLogging) {
+                console.log(chalk.gray(`Skipping beatmapset ${id} (status: ${status})`));
+            }
             return null;
         }
 
@@ -382,6 +405,10 @@ export async function fetchBeatmapsetFromOsu(id: number): Promise<any> {
     }
 }
 
+/*
+ * Beatmap updater
+ * Fetch and process existing beatmapsets in the database
+ */
 export async function refreshAllBeatmapsetsFromOsu(): Promise<void> {
     if (!osuApiInstance) {
         await osuAuthenticate();
@@ -454,7 +481,8 @@ export async function refreshAllBeatmapsetsFromOsu(): Promise<void> {
         console.error(chalk.red("Error in refreshAllBeatmapsetsFromOsu:"), err instanceof Error ? err.message : err);
     }
 }
-/**
+
+/*
  * Scan recently ranked/loved beatmapsets to catch old maps that got ranked late
  * Uses v1 API to get maps ranked in last 7 days by date
  */

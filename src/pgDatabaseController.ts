@@ -113,9 +113,9 @@ async function insertBeatmapset(beatmapset: any): Promise<void> {
 				bpm,
 				submitted, updated, ranked,
 				genre_id, language_id,
-				missing_audio, deleted, downloaded, file_size
+				missing_audio, dmca, more_information, deleted, downloaded, file_size
 			) VALUES (
-				$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25
+				$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27
 			)
 			ON CONFLICT (id) DO UPDATE SET
 				status = EXCLUDED.status,
@@ -139,6 +139,8 @@ async function insertBeatmapset(beatmapset: any): Promise<void> {
 				genre_id = EXCLUDED.genre_id,
 				language_id = EXCLUDED.language_id,
 				missing_audio = EXCLUDED.missing_audio,
+				dmca = EXCLUDED.dmca,
+				more_information = EXCLUDED.more_information,
 				deleted = EXCLUDED.deleted,
 				downloaded = EXCLUDED.downloaded,
 				file_size = EXCLUDED.file_size
@@ -153,7 +155,9 @@ async function insertBeatmapset(beatmapset: any): Promise<void> {
 				beatmapset.bpm,
 				beatmapset.submitted_date, beatmapset.last_updated, beatmapset.ranked_date,
 				beatmapset.genre?.id, beatmapset.language?.id,
-				beatmapset.availability?.download_disabled ?? false,
+				beatmapset.missing_audio,
+				beatmapset.dmca,
+				beatmapset.more_information,
 				beatmapset.deleted ?? false,
 				beatmapset.downloaded ?? false,
 				beatmapset.file_size ?? null

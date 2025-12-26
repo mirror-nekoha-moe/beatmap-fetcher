@@ -1,13 +1,13 @@
 import path from 'path';
 import dotenv from 'dotenv';
 import { Pool, PoolClient } from 'pg';
-import { schema, primaryKeys, foreignKeys } from './Schema';
+import { Schema } from './Schema';
 import { SchemaInspector } from './SchemaInspector';
 
 dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
 
 async function ensurePrimaryKeys(client: PoolClient): Promise<void> {
-	for (const pk of primaryKeys) {
+	for (const pk of Schema.primaryKeys) {
 		const constraintName = `${pk.table}_pkey`;
 		const exists = await client.query(
 			`SELECT 1 
@@ -30,7 +30,7 @@ async function ensurePrimaryKeys(client: PoolClient): Promise<void> {
 }
 
 async function ensureForeignKeys(client: PoolClient): Promise<void> {
-	for (const fk of foreignKeys) {
+	for (const fk of Schema.foreignKeys) {
 		const exists = await client.query(
 			`SELECT 1
 			 FROM information_schema.table_constraints tc
@@ -76,69 +76,68 @@ async function ensureStatsRow(client: PoolClient): Promise<void> {
 		console.warn(`Table ${tableName} has more than one row (${count}) — only one row is expected`);
 	}
 }
+export class SchemaUpdater {
+	static async init(): Promise<void> {
+		const pool = new Pool({
+			host: process.env.PG_HOSTNAME,
+			user: process.env.PG_USERNAME,
+			password: process.env.PG_PASSWORD,
+			database: process.env.PG_DATABASE,
+			max: 20,
+			idleTimeoutMillis: 0,
+			connectionTimeoutMillis: 0
+		});
 
-async function init(): Promise<void> {
-	const pool = new Pool({
-		host: process.env.PG_HOSTNAME,
-		user: process.env.PG_USERNAME,
-		password: process.env.PG_PASSWORD,
-	  database: process.env.PG_DATABASE,
-	  max: 20,
-	  idleTimeoutMillis: 0,
-	  connectionTimeoutMillis: 0
-	});
+		console.log('Testing PostgreSQL connection...');
+		try {
+			const client = await pool.connect();
+			console.log('Successfully connected to PostgreSQL!');
+			client.release();
+		} catch (err) {
+			console.error('Failed to connect to PostgreSQL:', err instanceof Error ? err.message : err);
+			process.exit(1);
+		}
 
-	console.log('Testing PostgreSQL connection...');
-	try {
+		// Connect again
 		const client = await pool.connect();
-		console.log('Successfully connected to PostgreSQL!');
-		client.release();
-	} catch (err) {
-		console.error('Failed to connect to PostgreSQL:', err instanceof Error ? err.message : err);
-		process.exit(1);
-	}
+		try {
+			console.log('Checking PostgreSQL schema consistency...');
+			for (const [table, sql] of Object.entries(Schema.Tables)) {
+				const tableNameMatch = (sql as string).match(/CREATE TABLE IF NOT EXISTS public\.([^\s(]+)/i);
 
-	// Connect again
-	const client = await pool.connect();
-	try {
-		console.log('Checking PostgreSQL schema consistency...');
-		for (const [table, sql] of Object.entries(schema)) {
-			const tableNameMatch = (sql as string).match(/CREATE TABLE IF NOT EXISTS public\.([^\s(]+)/i);
+				if (!tableNameMatch) continue;
+				const tableName = tableNameMatch[1];
 
-			if (!tableNameMatch) continue;
-			const tableName = tableNameMatch[1];
+				console.log(`Checking table: ${tableName}...`);
+				const exists = await SchemaInspector.tableExists(client, tableName);
+				
+				if (!exists) {
+					console.log(`Creating missing table: ${tableName}`);
+					await client.query(sql as string);
+					continue;
+				}
 
-			console.log(`Checking table: ${tableName}...`);
-			const exists = await SchemaInspector.tableExists(client, tableName);
-			
-			if (!exists) {
-				console.log(`Creating missing table: ${tableName}`);
-				await client.query(sql as string);
-				continue;
-			}
+				console.log(`Get columns for table: ${tableName}...`);
+				const currentCols = await SchemaInspector.getTableColumns(client, tableName);
+				const definedCols = SchemaInspector.extractColumnDefinitions(sql as string);
 
-			console.log(`Get columns for table: ${tableName}...`);
-			const currentCols = await SchemaInspector.getTableColumns(client, tableName);
-			const definedCols = SchemaInspector.extractColumnDefinitions(sql as string);
-
-			for (const [col, def] of Object.entries(definedCols)) {
-				if (!currentCols.includes(col)) {
-					console.log(`Adding missing column '${col}' to ${tableName}`);
-					await client.query(`ALTER TABLE public.${tableName} ADD COLUMN ${def}`);
+				for (const [col, def] of Object.entries(definedCols)) {
+					if (!currentCols.includes(col)) {
+						console.log(`Adding missing column '${col}' to ${tableName}`);
+						await client.query(`ALTER TABLE public.${tableName} ADD COLUMN ${def}`);
+					}
 				}
 			}
+			await ensurePrimaryKeys(client);
+			await ensureForeignKeys(client);
+			await ensureStatsRow(client);
+			console.log('Database schema is fully up to date!');
+		} catch (err) {
+			console.error('Schema update failed:', err instanceof Error ? err.message : err);
+			throw err;
+		} finally {
+			client.release();
+			await pool.end();
 		}
-		await ensurePrimaryKeys(client);
-		await ensureForeignKeys(client);
-		await ensureStatsRow(client);
-		console.log('Database schema is fully up to date!');
-	} catch (err) {
-		console.error('Schema update failed:', err instanceof Error ? err.message : err);
-		throw err;
-	} finally {
-		client.release();
-		await pool.end();
 	}
 }
-
-export { init };

@@ -63,7 +63,7 @@ export class Schema {
                 "total_length" BIGINT NULL DEFAULT NULL,
                 "url" TEXT NULL DEFAULT NULL,
                 "user_id" BIGINT NULL DEFAULT NULL,
-                "version" VARCHAR(100) NULL DEFAULT NULL
+                "version" TEXT NULL DEFAULT NULL
             );
             ALTER TABLE public.${process.env.TABLE_BEATMAP} OWNER TO ${process.env.PG_USERNAME};
         `,

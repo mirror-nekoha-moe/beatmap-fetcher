@@ -47,7 +47,7 @@ export class Schema {
                 "beatmapset_id" BIGINT NULL DEFAULT NULL,
                 "bpm" REAL NULL DEFAULT NULL,
                 "checksum" TEXT NULL DEFAULT NULL,
-                "convert" BOOLEAN NULL DEFAULT TRUE
+                "convert" BOOLEAN NULL DEFAULT NULL,
                 
                 "count_circles" BIGINT NULL DEFAULT NULL,
                 "count_sliders" BIGINT NULL DEFAULT NULL,
@@ -59,7 +59,7 @@ export class Schema {
                 "drain" REAL NULL DEFAULT NULL,
                 "hit_length" BIGINT NULL DEFAULT NULL,
                 "id" BIGINT NOT NULL PRIMARY KEY,
-                "is_scoreable" BOOLEAN NULL DEFAULT TRUE
+                "is_scoreable" BOOLEAN NULL DEFAULT NULL,
                 "last_updated" TIMESTAMPTZ NULL DEFAULT NULL,
                 "max_combo" BIGINT NULL DEFAULT NULL,
                 "mode" TEXT NULL DEFAULT NULL,
@@ -70,7 +70,7 @@ export class Schema {
                 "total_length" BIGINT NULL DEFAULT NULL,
                 "url" TEXT NULL DEFAULT NULL,
                 "user_id" BIGINT NULL DEFAULT NULL,
-                "version" VARCHAR(100) NULL DEFAULT NULL,
+                "version" VARCHAR(100) NULL DEFAULT NULL
             );
             ALTER TABLE public.${process.env.TABLE_BEATMAP} OWNER TO ${process.env.PG_USERNAME};
         `,
@@ -87,13 +87,13 @@ export class Schema {
                 "bpm" REAL NULL DEFAULT NULL,
 
                 "cover" TEXT NULL DEFAULT NULL,
-                "cover@2x" TEXT NULL DEFAULT NULL,
+                "cover_2x" TEXT NULL DEFAULT NULL,
                 "card" TEXT NULL DEFAULT NULL,
-                "card@2x" TEXT NULL DEFAULT NULL,
+                "card_2x" TEXT NULL DEFAULT NULL,
                 "list" TEXT NULL DEFAULT NULL,
-                "list@2x" TEXT NULL DEFAULT NULL,
+                "list_2x" TEXT NULL DEFAULT NULL,
                 "slimcover" TEXT NULL DEFAULT NULL,
-                "slimcover@2x" TEXT NULL DEFAULT NULL,
+                "slimcover_2x" TEXT NULL DEFAULT NULL,
 
                 "creator" VARCHAR(30) NULL DEFAULT NULL,
                 "deleted_at" TIMESTAMPTZ NULL DEFAULT NULL,

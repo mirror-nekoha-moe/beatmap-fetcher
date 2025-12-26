@@ -48,11 +48,9 @@ export class Schema {
                 "bpm" REAL NULL DEFAULT NULL,
                 "checksum" TEXT NULL DEFAULT NULL,
                 "convert" BOOLEAN NULL DEFAULT NULL,
-                
                 "count_circles" BIGINT NULL DEFAULT NULL,
                 "count_sliders" BIGINT NULL DEFAULT NULL,
                 "count_spinners" BIGINT NULL DEFAULT NULL,
-
                 "cs" REAL NULL DEFAULT NULL,
                 "deleted_at" TIMESTAMPTZ NULL DEFAULT NULL,
                 "difficulty_rating" REAL NULL DEFAULT NULL,
@@ -77,15 +75,13 @@ export class Schema {
 
         beatmapset: `
             CREATE TABLE IF NOT EXISTS public.${process.env.TABLE_BEATMAPSET} (
+                "id" BIGINT NOT NULL PRIMARY KEY,
                 "anime_cover" BOOLEAN NULL DEFAULT NULL,
                 "artist" TEXT NULL DEFAULT NULL,
                 "artist_unicode" TEXT NULL DEFAULT NULL,
-
                 "more_information" TEXT NULL DEFAULT NULL,
                 "download_disabled" BOOLEAN NULL DEFAULT NULL,
-
                 "bpm" REAL NULL DEFAULT NULL,
-
                 "cover" TEXT NULL DEFAULT NULL,
                 "cover_2x" TEXT NULL DEFAULT NULL,
                 "card" TEXT NULL DEFAULT NULL,
@@ -94,15 +90,11 @@ export class Schema {
                 "list_2x" TEXT NULL DEFAULT NULL,
                 "slimcover" TEXT NULL DEFAULT NULL,
                 "slimcover_2x" TEXT NULL DEFAULT NULL,
-
                 "creator" VARCHAR(30) NULL DEFAULT NULL,
                 "deleted_at" TIMESTAMPTZ NULL DEFAULT NULL,
                 "description" TEXT NULL DEFAULT NULL,
                 "favourite_count" BIGINT NULL DEFAULT NULL,
                 "genre_id" SMALLINT NULL DEFAULT NULL,
-
-                "id" BIGINT NOT NULL PRIMARY KEY,
-
                 "is_scoreable" BOOLEAN NULL DEFAULT NULL,
                 "language_id" SMALLINT NULL DEFAULT NULL,
                 "last_updated" TIMESTAMPTZ NULL DEFAULT NULL,
@@ -110,30 +102,23 @@ export class Schema {
                 "offset" SMALLINT NULL DEFAULT NULL,
                 "playcount" BIGINT NULL DEFAULT NULL,
                 "preview_url" TEXT NULL DEFAULT NULL,
-
                 "ranked_date" TIMESTAMPTZ NULL DEFAULT NULL,
                 "rating" REAL NULL DEFAULT NULL,
-
                 "source" TEXT NULL DEFAULT NULL,
                 "spotlight" BOOLEAN NULL DEFAULT NULL,
                 "status" TEXT NULL DEFAULT NULL,
                 "storyboard" BOOLEAN NULL DEFAULT NULL,
-
                 "submitted_date" TIMESTAMPTZ NULL DEFAULT NULL,
-
                 "tags" TEXT NULL DEFAULT NULL,
-
                 "title" TEXT NULL DEFAULT NULL,
                 "title_unicode" TEXT NULL DEFAULT NULL,
                 "user_id" BIGINT NULL DEFAULT NULL,
                 "video" BOOLEAN NULL DEFAULT NULL,
-
                 "beatmap_count" SMALLINT NULL DEFAULT NULL,
                 "mode_osu_count" SMALLINT NULL DEFAULT NULL,
                 "mode_taiko_count" SMALLINT NULL DEFAULT NULL,
                 "mode_fruits_count" SMALLINT NULL DEFAULT NULL,
                 "mode_mania_count" SMALLINT NULL DEFAULT NULL,
-
                 "downloaded" BOOLEAN NULL DEFAULT NULL,
                 "file_size" BIGINT NULL DEFAULT NULL
             );

@@ -6,6 +6,7 @@ const pool = createPool();
 
 export class StatsRepository {
     static async updateStats(): Promise<Stats | null> {
+        console.log("Updating Stats Table...");
         const client = await pool.connect();
         try {
             // Ensure stats row exists

@@ -12,7 +12,13 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "sourceMap": true,
-    "declaration": true
+    "declaration": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@Core/*": ["Core/*"],
+      "@Domain/*": ["Domain/*"],
+      "@Bootstrap/*": ["Bootstrap/*"]
+    }    
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

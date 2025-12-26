@@ -17,7 +17,8 @@
     "paths": {
       "@Core/*": ["Core/*"],
       "@Domain/*": ["Domain/*"],
-      "@Bootstrap/*": ["Bootstrap/*"]
+      "@Bootstrap/*": ["Bootstrap/*"],
+      "@Service/*": ["Service/*"]
     }    
   },
   "include": ["src/**/*"],

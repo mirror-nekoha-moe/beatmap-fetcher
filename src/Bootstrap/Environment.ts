@@ -25,7 +25,9 @@ export class Environment {
 
             // Settings
             'STORAGE_DIR',
-            'COOKIE_FILE'
+            'COOKIE_FILE',
+            'DEBUG_LOGGING',
+            'TRACK_ALL_MAPS'
         ];
 
         for (const varName of requiredEnvVars) {

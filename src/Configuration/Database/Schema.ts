@@ -45,7 +45,7 @@ export const schema = {
             "ar" REAL NULL DEFAULT NULL,
             "beatmapset_id" BIGINT NULL DEFAULT NULL,
             "bpm" REAL NULL DEFAULT NULL,
-            "checksum" VARCHAR(32) NULL DEFAULT NULL,
+            "checksum" TEXT NULL DEFAULT NULL,
             "convert" BOOLEAN NULL DEFAULT TRUE
             
             "count_circles" BIGINT NULL DEFAULT NULL,
@@ -61,10 +61,11 @@ export const schema = {
             "is_scoreable" BOOLEAN NULL DEFAULT TRUE
             "last_updated" TIMESTAMPTZ NULL DEFAULT NULL,
             "max_combo" BIGINT NULL DEFAULT NULL,
+            "mode" TEXT NULL DEFAULT NULL,
             "mode_int" SMALLINT NULL DEFAULT NULL,
             "passcount" BIGINT NULL DEFAULT NULL,
             "playcount" BIGINT NULL DEFAULT NULL,
-            "status" SMALLINT NULL DEFAULT NULL,
+            "status" TEXT NULL DEFAULT NULL,
             "total_length" BIGINT NULL DEFAULT NULL,
             "url" TEXT NULL DEFAULT NULL,
             "user_id" BIGINT NULL DEFAULT NULL,
@@ -114,7 +115,7 @@ export const schema = {
 
             "source" TEXT NULL DEFAULT NULL,
             "spotlight" BOOLEAN NULL DEFAULT NULL,
-            "status" SMALLINT NULL DEFAULT NULL,
+            "status" TEXT NULL DEFAULT NULL,
             "storyboard" BOOLEAN NULL DEFAULT NULL,
 
             "submitted_date" TIMESTAMPTZ NULL DEFAULT NULL,
@@ -131,6 +132,7 @@ export const schema = {
             "mode_taiko_count" SMALLINT NULL DEFAULT NULL,
             "mode_fruits_count" SMALLINT NULL DEFAULT NULL,
             "mode_mania_count" SMALLINT NULL DEFAULT NULL,
+
             "downloaded" BOOLEAN NULL DEFAULT NULL,
             "file_size" BIGINT NULL DEFAULT NULL
         );

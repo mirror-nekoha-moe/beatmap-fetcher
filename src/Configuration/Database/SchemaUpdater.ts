@@ -1,75 +1,10 @@
 import path from 'path';
 import dotenv from 'dotenv';
 import { Pool, PoolClient } from 'pg';
-import { schema } from './pgDatabaseModel';
+import { schema, primaryKeys, foreignKeys } from './Schema';
+import { SchemaInspector } from './SchemaInspector';
 
 dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
-
-interface PrimaryKey {
-    table: string;
-    column: string;
-}
-
-interface ForeignKey {
-    sourceTable: string;
-    sourceColumn: string;
-    targetTable: string;
-    targetColumn: string;
-    onDelete: string;
-    constraintName: string;
-}
-
-const primaryKeys: PrimaryKey[] = [
-	{ table: process.env.TABLE_BEATMAP!, column: 'id' },
-	{ table: process.env.TABLE_BEATMAPSET!, column: 'id' },
-];
-
-const foreignKeys: ForeignKey[] = [
-	{
-		sourceTable: process.env.TABLE_BEATMAP!,
-		sourceColumn: 'beatmapset_id',
-		targetTable: process.env.TABLE_BEATMAPSET!,
-		targetColumn: 'id',
-		onDelete: 'CASCADE',
-		constraintName: 'fk_beatmapset_id',
-	},
-];
-
-async function tableExists(client: PoolClient, tableName: string): Promise<boolean> {
-	const res = await client.query(
-		`SELECT EXISTS (
-			SELECT 1 FROM information_schema.tables 
-			WHERE table_schema = 'public' AND table_name = $1
-		)`,
-		[tableName]
-	);
-	return res.rows[0].exists;
-}
-
-async function getTableColumns(client: PoolClient, tableName: string): Promise<string[]> {
-	const res = await client.query(
-		`SELECT column_name FROM information_schema.columns 
-		 WHERE table_schema = 'public' AND table_name = $1`,
-		[tableName]
-	);
-	return res.rows.map((r: { column_name: string }) => r.column_name);
-}
-
-function extractColumnDefinitions(schemaSQL: string): Record<string, string> {
-	const createStmt = schemaSQL.match(/CREATE TABLE[^;]+;/s);
-	if (!createStmt) return {};
-	const cols = createStmt[0]
-		.split('\n')
-		.map((l: string) => l.trim())
-		.filter((l: string) => l && !l.startsWith('CREATE TABLE') && !l.startsWith(')') && !l.startsWith('ALTER') && !l.startsWith('CONSTRAINT'))
-		.map((l: string) => l.replace(/,$/, ''));
-	const defs: Record<string, string> = {};
-	for (const line of cols) {
-		const [col] = line.split(/\s+/);
-		defs[col.replace(/["`]/g, '')] = line;
-	}
-	return defs;
-}
 
 async function ensurePrimaryKeys(client: PoolClient): Promise<void> {
 	for (const pk of primaryKeys) {
@@ -174,7 +109,7 @@ async function init(): Promise<void> {
 			const tableName = tableNameMatch[1];
 
 			console.log(`Checking table: ${tableName}...`);
-			const exists = await tableExists(client, tableName);
+			const exists = await SchemaInspector.tableExists(client, tableName);
 			
 			if (!exists) {
 				console.log(`Creating missing table: ${tableName}`);
@@ -183,8 +118,8 @@ async function init(): Promise<void> {
 			}
 
 			console.log(`Get columns for table: ${tableName}...`);
-			const currentCols = await getTableColumns(client, tableName);
-			const definedCols = extractColumnDefinitions(sql as string);
+			const currentCols = await SchemaInspector.getTableColumns(client, tableName);
+			const definedCols = SchemaInspector.extractColumnDefinitions(sql as string);
 
 			for (const [col, def] of Object.entries(definedCols)) {
 				if (!currentCols.includes(col)) {

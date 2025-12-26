@@ -1,10 +1,6 @@
-import path from 'path';
-import dotenv from 'dotenv';
 import { Pool, PoolClient } from 'pg';
-import { Schema } from './Schema';
-import { SchemaInspector } from './SchemaInspector';
-
-dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
+import { Schema } from 'Core/Database/Schema';
+import { SchemaInspector } from 'Core/Database/SchemaInspector';
 
 async function ensurePrimaryKeys(client: PoolClient): Promise<void> {
 	for (const pk of Schema.primaryKeys) {

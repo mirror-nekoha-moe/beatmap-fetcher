@@ -1,8 +1,4 @@
 import { Pool, PoolConfig } from 'pg';
-import path from 'path';
-import dotenv from 'dotenv';
-
-dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
 
 export const DatabaseConfig: PoolConfig = {
     host: process.env.PG_HOSTNAME!,

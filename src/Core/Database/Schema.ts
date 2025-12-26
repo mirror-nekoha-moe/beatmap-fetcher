@@ -3,11 +3,6 @@
     MODIFY THIS FILE TO ADD TABLES OR COLUMNS
 */
 
-import path from 'path';
-import dotenv from 'dotenv';
-
-dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
-
 interface PrimaryKey {
     table: string;
     column: string;

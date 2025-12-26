@@ -1,9 +1,7 @@
-// GLOBAL VARIABLE STATE
+// GLOBAL RUNTIME STATES
 
 export var highestKnownBeatmapsetId = 0;
-export var debugLogging = false;
-export var trackAllMaps = true;
+
 export const config = {
     highestKnownBeatmapsetId,
-    debugLogging
 };

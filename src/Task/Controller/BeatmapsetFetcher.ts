@@ -4,7 +4,7 @@ import { BeatmapsetController } from '@Domain/Beatmapset/Controller/BeatmapsetCo
 import { StatsRepository } from '@Domain/Stats/Repository/StatsRepository';
 import { BaseTask } from '@Task/BaseTask';
 
-import { config } from 'config';
+import { config } from 'Config';
 
 export class BeatmapsetFetcher {
     private static async fetchHighestKnownBeatmapsetId(): Promise<number> {

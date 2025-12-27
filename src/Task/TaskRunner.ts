@@ -12,11 +12,11 @@ export class TaskRunner {
         try {
             OsuAuthenticator.run(120, 1);
             CookieReader.run(60, 1);
-            StatsUpdater.run(300 * 1000);
-            BeatmapsetUpdater.run(0);
-            BeatmapsetFetcher.run(0);
-            RecentScanner.run(60 * 60 * 1000);
-            MissingScanner.run(24 * 60 * 60 * 1000);
+            StatsUpdater.run(5, 1);
+            BeatmapsetUpdater.run(1, 30);
+            BeatmapsetFetcher.run(1, 10);
+            RecentScanner.run(60, 10);
+            MissingScanner.run(1440, 10);
         } catch (err) {
             console.error(chalk.red("TaskRunner encountered an error:"), err instanceof Error ? err.message : err);
             process.exit(1);

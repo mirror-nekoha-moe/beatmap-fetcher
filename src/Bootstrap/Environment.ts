@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 export class Environment {
     // Environment Object
-    static env: Record<string, any> = {};
+    public static env: Record<string, any> = {};
     
     public static initialize(): void {
         console.log("Loading Environment variables...");
@@ -91,5 +91,8 @@ export class Environment {
         COOKIE_FILE: String,
         DEBUG_LOGGING: Boolean,
         TRACK_ALL_MAPS: Boolean,
+
+        MIRROR_LOG_WEBHOOK: Boolean,
+        MIRROR_LOG_MAPSET: Boolean,
     };
 }

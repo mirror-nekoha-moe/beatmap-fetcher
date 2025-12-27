@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 export class Environment {
     // Environment Object
-    public static env: Record<string, any> = {};
+    public static env: EnvType;
     
     public static initialize(): void {
         console.log("Loading Environment variables...");
@@ -65,14 +65,14 @@ export class Environment {
             else if (type === Boolean) value = raw === "true";
             else value = raw;
 
-            acc[key] = value;
+            (acc as any)[key] = value;
             return acc;
-        }, {} as Record<string, any>);
+        }, {} as EnvType);
     }
 
     static schema = {
         OSU_API_V1_KEY: String,
-        OSU_API_CLIENT_ID: Number,
+        OSU_API_CLIENT_ID: String,
         OSU_API_CLIENT_SECRET: String,
 
         PG_HOSTNAME: String,
@@ -96,3 +96,14 @@ export class Environment {
         MIRROR_LOG_MAPSET: Boolean,
     };
 }
+
+// Auto-generate a type from schema keys
+type Schema = typeof Environment.schema;
+
+type EnvType = {
+    [K in keyof Schema]: 
+        Schema[K] extends StringConstructor ? string :
+        Schema[K] extends NumberConstructor ? number :
+        Schema[K] extends BooleanConstructor ? boolean :
+        any;
+};

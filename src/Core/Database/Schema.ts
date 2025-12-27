@@ -96,6 +96,7 @@ export class Schema {
                 "mode_mania_count" SMALLINT NULL DEFAULT NULL,
                 "mode_osu_count" SMALLINT NULL DEFAULT NULL,
                 "mode_taiko_count" SMALLINT NULL DEFAULT NULL,
+                "more_information" TEXT NULL DEFAULT NULL,
                 "nsfw" BOOLEAN NULL DEFAULT NULL,
                 "offset" SMALLINT NULL DEFAULT NULL,
                 "playcount" BIGINT NULL DEFAULT NULL,

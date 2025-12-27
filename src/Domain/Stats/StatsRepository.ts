@@ -1,6 +1,6 @@
 import { createPool } from "@Core/Database/Connection";
-import { Tables } from "@Core/Database/Tables";
 import { Stats } from "@Domain/Stats/StatsModel";
+import { Environment } from "@Bootstrap/Environment";
 
 const pool = createPool();
 
@@ -11,55 +11,55 @@ export class StatsRepository {
         try {
             // Ensure stats row exists
             await client.query(`
-                INSERT INTO public.${Tables.STATS} (last_beatmapset_id)
+                INSERT INTO public.${Environment.env.TABLE_STATS} (last_beatmapset_id)
                 SELECT 0
-                WHERE NOT EXISTS (SELECT 1 FROM public.${Tables.STATS})
+                WHERE NOT EXISTS (SELECT 1 FROM public.${Environment.env.TABLE_STATS})
             `);
 
             const res = await client.query(`
                 SELECT
-                    (SELECT COALESCE(MAX(id), 0) FROM public.${Tables.BEATMAPSET}) AS last_beatmapset_id,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAPSET}) AS beatmapset_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP}) AS beatmap_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAPSET} WHERE status = 1) AS ranked_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAPSET} WHERE status = 2) AS approved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAPSET} WHERE status = 4) AS loved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAPSET} WHERE status = -2) AS graveyard_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAPSET} WHERE status IN (-1,0,3)) AS pending_count,
-                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Tables.BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL) AS total_size,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 1) AS bm_ranked_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 2) AS bm_approved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 4) AS bm_loved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = -2) AS bm_graveyard_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status IN (-1,0,3)) AS bm_pending_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAPSET} WHERE downloaded = false) AS missing_beatmapsets,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 1 AND mode = 0) AS osu_bm_ranked_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 2 AND mode = 0) AS osu_bm_approved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 4 AND mode = 0) AS osu_bm_loved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = -2 AND mode = 0) AS osu_bm_graveyard_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status IN (-1,0,3) AND mode = 0) AS osu_bm_pending_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 1 AND mode = 1) AS taiko_bm_ranked_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 2 AND mode = 1) AS taiko_bm_approved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 4 AND mode = 1) AS taiko_bm_loved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = -2 AND mode = 1) AS taiko_bm_graveyard_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status IN (-1,0,3) AND mode = 1) AS taiko_bm_pending_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 1 AND mode = 2) AS fruits_bm_ranked_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 2 AND mode = 2) AS fruits_bm_approved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 4 AND mode = 2) AS fruits_bm_loved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = -2 AND mode = 2) AS fruits_bm_graveyard_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status IN (-1,0,3) AND mode = 2) AS fruits_bm_pending_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 1 AND mode = 3) AS mania_bm_ranked_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 2 AND mode = 3) AS mania_bm_approved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = 4 AND mode = 3) AS mania_bm_loved_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status = -2 AND mode = 3) AS mania_bm_graveyard_count,
-                    (SELECT COUNT(*) FROM public.${Tables.BEATMAP} WHERE status IN (-1,0,3) AND mode = 3) AS mania_bm_pending_count
+                    (SELECT COALESCE(MAX(id), 0) FROM public.${Environment.env.TABLE_BEATMAPSET}) AS last_beatmapset_id,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAPSET}) AS beatmapset_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP}) AS beatmap_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE status = 1) AS ranked_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE status = 2) AS approved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE status = 4) AS loved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE status = -2) AS graveyard_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE status IN (-1,0,3)) AS pending_count,
+                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL) AS total_size,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 1) AS bm_ranked_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 2) AS bm_approved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 4) AS bm_loved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = -2) AS bm_graveyard_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status IN (-1,0,3)) AS bm_pending_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = false) AS missing_beatmapsets,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 1 AND mode = 0) AS osu_bm_ranked_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 2 AND mode = 0) AS osu_bm_approved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 4 AND mode = 0) AS osu_bm_loved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = -2 AND mode = 0) AS osu_bm_graveyard_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status IN (-1,0,3) AND mode = 0) AS osu_bm_pending_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 1 AND mode = 1) AS taiko_bm_ranked_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 2 AND mode = 1) AS taiko_bm_approved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 4 AND mode = 1) AS taiko_bm_loved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = -2 AND mode = 1) AS taiko_bm_graveyard_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status IN (-1,0,3) AND mode = 1) AS taiko_bm_pending_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 1 AND mode = 2) AS fruits_bm_ranked_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 2 AND mode = 2) AS fruits_bm_approved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 4 AND mode = 2) AS fruits_bm_loved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = -2 AND mode = 2) AS fruits_bm_graveyard_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status IN (-1,0,3) AND mode = 2) AS fruits_bm_pending_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 1 AND mode = 3) AS mania_bm_ranked_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 2 AND mode = 3) AS mania_bm_approved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 4 AND mode = 3) AS mania_bm_loved_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = -2 AND mode = 3) AS mania_bm_graveyard_count,
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status IN (-1,0,3) AND mode = 3) AS mania_bm_pending_count
             `);
 
             const stats = res.rows[0];
 
             // Update the stats row
             await client.query(`
-                UPDATE public.${Tables.STATS} SET
+                UPDATE public.${Environment.env.TABLE_STATS} SET
                     last_beatmapset_id = $1,
                     beatmapset_count = $2,
                     beatmap_count = $3,
@@ -145,21 +145,21 @@ export class StatsRepository {
     static async getScanCursor(): Promise<number> {
         await pool.query(
             `
-            INSERT INTO public.${Tables.STATS} (scan_cursor)
+            INSERT INTO public.${Environment.env.TABLE_STATS} (scan_cursor)
             SELECT 0
-            WHERE NOT EXISTS (SELECT 1 FROM public.${Tables.STATS})
+            WHERE NOT EXISTS (SELECT 1 FROM public.${Environment.env.TABLE_STATS})
             `
         );
 
         const res = await pool.query(
-            `SELECT scan_cursor FROM public.${Tables.STATS} LIMIT 1`
+            `SELECT scan_cursor FROM public.${Environment.env.TABLE_STATS} LIMIT 1`
         );
         return res.rows[0]?.scan_cursor ?? 0;
     }
 
     static async updateScanCursor(cursor: number): Promise<void> {
         await pool.query(
-            `UPDATE public.${Tables.STATS} SET scan_cursor = $1`,
+            `UPDATE public.${Environment.env.TABLE_STATS} SET scan_cursor = $1`,
             [cursor]
         );
     }

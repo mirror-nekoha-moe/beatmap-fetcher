@@ -61,7 +61,7 @@ export class Environment {
             let value: any;
 
             if (type === String) value = raw;
-            else if (type === Number) value = Number(raw);
+            // else if (type === Number) value = Number(raw);
             else if (type === Boolean) value = raw === "true";
             else value = raw;
 
@@ -79,9 +79,9 @@ export class Environment {
         PG_USERNAME: String,
         PG_PASSWORD: String,
         PG_DATABASE: String,
-        PG_MAX_CONN: Number,
-        PG_IDLE_TIMEOUT: Number,
-        PG_CONN_TIMEOUT: Number,
+        PG_MAX_CONN: String,
+        PG_IDLE_TIMEOUT: String,
+        PG_CONN_TIMEOUT: String,
 
         TABLE_BEATMAPSET: String,
         TABLE_BEATMAP: String,
@@ -92,8 +92,8 @@ export class Environment {
         DEBUG_LOGGING: Boolean,
         TRACK_ALL_MAPS: Boolean,
 
-        MIRROR_LOG_WEBHOOK: Boolean,
-        MIRROR_LOG_MAPSET: Boolean,
+        MIRROR_LOG_WEBHOOK: String,
+        MIRROR_LOG_MAPSET: String,
     };
 }
 
@@ -103,7 +103,7 @@ type Schema = typeof Environment.schema;
 type EnvType = {
     [K in keyof Schema]: 
         Schema[K] extends StringConstructor ? string :
-        Schema[K] extends NumberConstructor ? number :
+        // Schema[K] extends NumberConstructor ? number :
         Schema[K] extends BooleanConstructor ? boolean :
         any;
 };

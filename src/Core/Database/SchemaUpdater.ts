@@ -1,6 +1,7 @@
 import { Pool, PoolClient } from 'pg';
 import { Schema } from '@Core/Database/Schema';
 import { SchemaInspector } from '@Core/Database/SchemaInspector';
+import { Environment } from '@Bootstrap/Environment';
 
 async function ensurePrimaryKeys(client: PoolClient): Promise<void> {
 	for (const pk of Schema.primaryKeys) {
@@ -56,7 +57,7 @@ async function ensureForeignKeys(client: PoolClient): Promise<void> {
 
 // Ensure table_stats has exactly one row
 async function ensureStatsRow(client: PoolClient): Promise<void> {
-	const tableName = process.env.TABLE_STATS!;
+	const tableName = Environment.env.TABLE_STATS!;
 	const res = await client.query(`SELECT COUNT(*) AS cnt FROM public.${tableName}`);
 	const count = parseInt(res.rows[0].cnt, 10);
 
@@ -75,10 +76,10 @@ async function ensureStatsRow(client: PoolClient): Promise<void> {
 export class SchemaUpdater {
 	static async initialize(): Promise<void> {
 		const pool = new Pool({
-			host: process.env.PG_HOSTNAME,
-			user: process.env.PG_USERNAME,
-			password: process.env.PG_PASSWORD,
-			database: process.env.PG_DATABASE,
+			host: Environment.env.PG_HOSTNAME,
+			user: Environment.env.PG_USERNAME,
+			password: Environment.env.PG_PASSWORD,
+			database: Environment.env.PG_DATABASE,
 			max: 20,
 			idleTimeoutMillis: 0,
 			connectionTimeoutMillis: 0

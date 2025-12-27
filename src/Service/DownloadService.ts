@@ -5,10 +5,11 @@ import { pipeline } from 'stream/promises';
 import chalk from 'chalk';
 import { Curl } from 'node-libcurl';
 
+import { Environment } from '@Bootstrap/Environment';
 import { CookieService } from "Service/CookieService";
 
 export class DownloadService {
-  static basePath = path.resolve(__dirname, process.env.STORAGE_DIR!);
+  static basePath = path.resolve(__dirname, Environment.env.STORAGE_DIR!);
 
   static async getDownloadUrl(beatmapsetId: number): Promise<string> {
     let osu_session = CookieService.getSession();

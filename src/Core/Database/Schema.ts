@@ -1,3 +1,5 @@
+import { Environment } from '@Bootstrap/Environment';
+
 /*
     THIS FILE DEFINES THE DATABASE STRUCTURE
     MODIFY THIS FILE TO ADD TABLES OR COLUMNS
@@ -19,15 +21,15 @@ interface ForeignKey {
 
 export class Schema {
     static primaryKeys: PrimaryKey[] = [
-        { table: process.env.TABLE_BEATMAP!, column: 'id' },
-        { table: process.env.TABLE_BEATMAPSET!, column: 'id' },
+        { table: Environment.env.TABLE_BEATMAP!, column: 'id' },
+        { table: Environment.env.TABLE_BEATMAPSET!, column: 'id' },
     ];
 
     static foreignKeys: ForeignKey[] = [
         {
-            sourceTable: process.env.TABLE_BEATMAP!,
+            sourceTable: Environment.env.TABLE_BEATMAP!,
             sourceColumn: 'beatmapset_id',
-            targetTable: process.env.TABLE_BEATMAPSET!,
+            targetTable: Environment.env.TABLE_BEATMAPSET!,
             targetColumn: 'id',
             onDelete: 'CASCADE',
             constraintName: 'fk_beatmapset_id',
@@ -36,7 +38,7 @@ export class Schema {
 
     static Tables = {
         beatmap: `
-            CREATE TABLE IF NOT EXISTS public.${process.env.TABLE_BEATMAP} (
+            CREATE TABLE IF NOT EXISTS public.${Environment.env.TABLE_BEATMAP} (
                 "accuracy" REAL NULL DEFAULT NULL,
                 "ar" REAL NULL DEFAULT NULL,
                 "beatmapset_id" BIGINT NULL DEFAULT NULL,
@@ -65,11 +67,11 @@ export class Schema {
                 "user_id" BIGINT NULL DEFAULT NULL,
                 "version" TEXT NULL DEFAULT NULL
             );
-            ALTER TABLE public.${process.env.TABLE_BEATMAP} OWNER TO ${process.env.PG_USERNAME};
+            ALTER TABLE public.${Environment.env.TABLE_BEATMAP} OWNER TO ${Environment.env.PG_USERNAME};
         `,
 
         beatmapset: `
-            CREATE TABLE IF NOT EXISTS public.${process.env.TABLE_BEATMAPSET} (
+            CREATE TABLE IF NOT EXISTS public.${Environment.env.TABLE_BEATMAPSET} (
                 "id" BIGINT NOT NULL PRIMARY KEY,
                 "anime_cover" BOOLEAN NULL DEFAULT NULL,
                 "artist" TEXT NULL DEFAULT NULL,
@@ -117,11 +119,11 @@ export class Schema {
                 "downloaded" BOOLEAN NULL DEFAULT NULL,
                 "file_size" BIGINT NULL DEFAULT NULL
             );
-            ALTER TABLE public.${process.env.TABLE_BEATMAPSET} OWNER TO ${process.env.PG_USERNAME};
+            ALTER TABLE public.${Environment.env.TABLE_BEATMAPSET} OWNER TO ${Environment.env.PG_USERNAME};
         `,
 
         stats: `
-            CREATE TABLE IF NOT EXISTS public.${process.env.TABLE_STATS} (
+            CREATE TABLE IF NOT EXISTS public.${Environment.env.TABLE_STATS} (
                 last_beatmapset_id bigint NULL DEFAULT 0,
                 beatmapset_count bigint NULL DEFAULT 0,
                 beatmap_count bigint NULL DEFAULT 0,
@@ -159,7 +161,7 @@ export class Schema {
                 mania_bm_graveyard_count bigint NULL DEFAULT 0,
                 mania_bm_pending_count bigint NULL DEFAULT 0
             );
-            ALTER TABLE public.${process.env.TABLE_STATS} OWNER TO ${process.env.PG_USERNAME};
+            ALTER TABLE public.${Environment.env.TABLE_STATS} OWNER TO ${Environment.env.PG_USERNAME};
         `,
     };
 }

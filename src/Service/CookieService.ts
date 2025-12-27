@@ -2,8 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 
+import { Environment } from '@Bootstrap/Environment';
+
 export class CookieService {
-  private static COOKIE_FILE = path.resolve(__dirname, process.env.COOKIE_FILE!);
+  private static COOKIE_FILE = path.resolve(__dirname, Environment.env.COOKIE_FILE!);
   private static osu_session: string = "";
 
   public static readCookie(): void {

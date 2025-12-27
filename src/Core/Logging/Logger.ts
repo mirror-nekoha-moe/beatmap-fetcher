@@ -1,12 +1,13 @@
 import fetch from 'node-fetch';
 import chalk from 'chalk';
+import { Environment } from '@Bootstrap/Environment';
 
 chalk.level = 3;
 
 export class Logger {
     private static logBuffer: string[] = [];
     private static batchTimer: NodeJS.Timeout | null = null;
-    private static WEBHOOK_URL = process.env.MIRROR_LOG_WEBHOOK;
+    private static WEBHOOK_URL = Environment.env.MIRROR_LOG_WEBHOOK;
     private static readonly BATCH_SIZE = 10;
     private static readonly BATCH_INTERVAL = 1000;
 

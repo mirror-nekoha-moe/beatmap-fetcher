@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from 'pg';
-import { Schema } from 'Core/Database/Schema';
-import { SchemaInspector } from 'Core/Database/SchemaInspector';
+import { Schema } from '@Core/Database/Schema';
+import { SchemaInspector } from '@Core/Database/SchemaInspector';
 
 async function ensurePrimaryKeys(client: PoolClient): Promise<void> {
 	for (const pk of Schema.primaryKeys) {
@@ -73,7 +73,7 @@ async function ensureStatsRow(client: PoolClient): Promise<void> {
 	}
 }
 export class SchemaUpdater {
-	static async init(): Promise<void> {
+	static async initialize(): Promise<void> {
 		const pool = new Pool({
 			host: process.env.PG_HOSTNAME,
 			user: process.env.PG_USERNAME,

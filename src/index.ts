@@ -1,7 +1,7 @@
 import { SchemaUpdater } from '@Core/Database/SchemaUpdater';
 import { Logger } from '@Core/Logging/Logger';
 import { Environment } from '@Bootstrap/Environment';
-import { thControllerMain } from './threadController';
+import { TaskRunner } from '@Task/TaskRunner';
 
 async function main(): Promise<void> {
     Logger.hookConsole();
@@ -9,7 +9,7 @@ async function main(): Promise<void> {
     console.log("[ beatmap-fetcher ]");
     await Environment.initialize();
     await SchemaUpdater.initialize();
-    thControllerMain();
+    TaskRunner.run();
     console.log("main() execution done.");   
 }
 

@@ -1,13 +1,13 @@
 import { createPool } from '@Core/Database/Connection';
-import { Tables } from '@Core/Database/Tables';
 import { Beatmap } from '@Domain/Beatmap/BeatmapModel';
+import { Environment } from '@Bootstrap/Environment';
 
 const pool = createPool();
 
 export class BeatmapRepository {
     static async insertBeatmap(beatmap: Beatmap): Promise<void> {
         await pool.query(`
-            INSERT INTO public.${Tables.BEATMAP} (
+            INSERT INTO public.${Environment.env.TABLE_BEATMAP} (
                 id, beatmapset_id, mode, mode_int, status, version, user_id,
                 difficulty_rating, cs, ar, drain, accuracy,
                 count_circles, count_sliders, count_spinners, max_combo,
@@ -78,7 +78,7 @@ export class BeatmapRepository {
 
     static async beatmapExists(id: number): Promise<boolean> {
         const res = await pool.query(
-            `SELECT 1 FROM public.${Tables.BEATMAP} WHERE id = $1 LIMIT 1`,
+            `SELECT 1 FROM public.${Environment.env.TABLE_BEATMAP} WHERE id = $1 LIMIT 1`,
             [id]
         );
         return res.rowCount === 1;

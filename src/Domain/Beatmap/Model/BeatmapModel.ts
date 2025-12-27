@@ -7,7 +7,6 @@
    Beatmap
    =========================== */
 export interface Beatmap {
-    id: bigint;
     accuracy: number | null;
     ar: number | null;
     beatmapset_id: bigint | null;
@@ -22,6 +21,7 @@ export interface Beatmap {
     difficulty_rating: number | null;
     drain: number | null;
     hit_length: bigint | null;
+    id: bigint;
     is_scoreable: boolean | null;
     last_updated: Date | null;
     max_combo: bigint | null;

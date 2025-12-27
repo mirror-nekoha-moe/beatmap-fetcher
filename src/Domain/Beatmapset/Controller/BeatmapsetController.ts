@@ -9,35 +9,6 @@ import { BeatmapController } from '@Domain/Beatmap/Controller/BeatmapController'
 
 const basePath = path.resolve(__dirname, Environment.env.STORAGE_DIR!);
 
-// enum BeatmapStatus {
-//     Graveyard = -2,
-//     Pending = 0,
-//     Ranked = 1,
-//     Approved = 2,
-//     Loved = 4
-// }
-
-// const statusMap: Record<string, BeatmapStatus> = {
-//     graveyard: BeatmapStatus.Graveyard,
-//     pending: BeatmapStatus.Pending,
-//     ranked: BeatmapStatus.Ranked,
-//     approved: BeatmapStatus.Approved,
-//     loved: BeatmapStatus.Loved
-// };
-
-// enum GameMode {
-//     Osu = 0,
-//     Taiko = 1,
-//     Fruits = 2,
-//     Mania = 3
-// }
-// const modeMap: Record<string, GameMode> = { 
-//     osu: GameMode.Osu,
-//     taiko: GameMode.Taiko,
-//     fruits: GameMode.Fruits,
-//     mania: GameMode.Mania
-// };
-
 export class BeatmapsetController {
 
     /**

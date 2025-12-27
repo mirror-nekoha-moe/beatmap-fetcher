@@ -1,13 +1,13 @@
 import { createPool } from '@Core/Database/Connection';
-import { Tables } from '@Core/Database/Tables';
 import { Beatmapset } from '@Domain/Beatmapset/BeatmapsetModel';
+import { Environment } from '@Bootstrap/Environment';
 
 const pool = createPool();
 
 export class BeatmapsetRepository {
     static async insertBeatmapset(beatmapset: Beatmapset): Promise<void> {
         await pool.query(`
-            INSERT INTO public.${Tables.BEATMAPSET} (
+            INSERT INTO public.${Environment.env.TABLE_BEATMAPSET} (
                 id, anime_cover, artist, artist_unicode,
                 more_information, download_disabled,
                 bpm,
@@ -129,7 +129,7 @@ export class BeatmapsetRepository {
 
     static async beatmapsetExists(id: number): Promise<boolean> {
         const res = await pool.query(
-            `SELECT 1 FROM public.${Tables.BEATMAPSET} WHERE id = $1 LIMIT 1`,
+            `SELECT 1 FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE id = $1 LIMIT 1`,
             [id]
         );
         return res.rowCount === 1;
@@ -137,29 +137,37 @@ export class BeatmapsetRepository {
 
     static async getBeatmapsetById(id: number): Promise<Beatmapset | null> {
         const res = await pool.query(
-            `SELECT * FROM public.${Tables.BEATMAPSET} WHERE id = $1`,
+            `SELECT * FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE id = $1`,
             [id]
         );
         return res.rows[0] ?? null;
     }
 
+    static async getAllBeatmapset(): Promise<number[]> {
+        const res = await pool.query(
+            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET} ORDER BY id ASC`
+        );
+        
+        return res.rows.map(r => Number(r.id));
+    }
+
     static async getHighestBeatmapsetId(): Promise<number> {
         const res = await pool.query(
-            `SELECT COALESCE(MAX(id), 0) AS max FROM public.${Tables.BEATMAPSET}`
+            `SELECT COALESCE(MAX(id), 0) AS max FROM public.${Environment.env.TABLE_BEATMAPSET}`
         );
         return res.rows[0].max;
     }
 
     static async getMissingBeatmapsets(): Promise<{ id: number }[]> {
         const res = await pool.query(
-            `SELECT id FROM public.${Tables.BEATMAPSET} WHERE downloaded = false ORDER BY id ASC`
+            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = false ORDER BY id ASC`
         );
         return res.rows;
     }
 
     static async getMissingMetadata(): Promise<{ id: number }[]> {
         const res = await pool.query(
-            `SELECT id FROM public.${Tables.BEATMAPSET} WHERE user_id IS NULL ORDER BY id ASC`
+            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE user_id IS NULL ORDER BY id ASC`
         );
         return res.rows;
     }
@@ -170,21 +178,21 @@ export class BeatmapsetRepository {
 
     static async markBeatmapsetDownloaded(id: number, value = true): Promise<void> {
         await pool.query(
-            `UPDATE public.${Tables.BEATMAPSET} SET downloaded = $1 WHERE id = $2`,
+            `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET downloaded = $1 WHERE id = $2`,
             [value, id]
         );
     }
 
     static async markBeatmapsetDeleted(id: number, value = true): Promise<void> {
         await pool.query(
-            `UPDATE public.${Tables.BEATMAPSET} SET deleted = $1 WHERE id = $2`,
+            `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET deleted = $1 WHERE id = $2`,
             [value, id]
         );
     }
 
     static async markBeatmapsetMissingAudio(id: number, value = true): Promise<void> {
         await pool.query(
-            `UPDATE public.${Tables.BEATMAPSET} SET missing_audio = $1 WHERE id = $2`,
+            `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET missing_audio = $1 WHERE id = $2`,
             [value, id]
         );
     }

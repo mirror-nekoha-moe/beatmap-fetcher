@@ -1,6 +1,6 @@
-import { createPool } from 'Core/Database/Connection';
-import { Tables } from 'Core/Database/Tables';
-import { Beatmapset } from 'Domain/Beatmapset/Model';
+import { createPool } from '@Core/Database/Connection';
+import { Tables } from '@Core/Database/Tables';
+import { Beatmapset } from '@Domain/Beatmapset/BeatmapsetModel';
 
 const pool = createPool();
 

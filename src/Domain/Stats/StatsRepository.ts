@@ -1,6 +1,6 @@
-import { createPool } from "Core/Database/Connection";
-import { Tables } from "Core/Database/Tables";
-import { Stats } from "Domain/Stats/Model";
+import { createPool } from "@Core/Database/Connection";
+import { Tables } from "@Core/Database/Tables";
+import { Stats } from "@Domain/Stats/StatsModel";
 
 const pool = createPool();
 

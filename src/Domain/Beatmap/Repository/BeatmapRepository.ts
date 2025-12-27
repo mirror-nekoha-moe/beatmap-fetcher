@@ -1,5 +1,5 @@
 import { createPool } from '@Core/Database/Connection';
-import { Beatmap } from '@Domain/Beatmap/BeatmapModel';
+import { Beatmap } from '@Domain/Beatmap/Model/BeatmapModel';
 import { Environment } from '@Bootstrap/Environment';
 
 const pool = createPool();

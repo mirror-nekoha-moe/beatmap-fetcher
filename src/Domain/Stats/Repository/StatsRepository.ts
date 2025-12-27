@@ -1,5 +1,5 @@
 import { createPool } from "@Core/Database/Connection";
-import { Stats } from "@Domain/Stats/StatsModel";
+import { Stats } from "@Domain/Stats/Model/StatsModel";
 import { Environment } from "@Bootstrap/Environment";
 
 const pool = createPool();

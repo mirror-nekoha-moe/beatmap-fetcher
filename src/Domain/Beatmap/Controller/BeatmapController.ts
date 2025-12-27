@@ -1,4 +1,4 @@
-import { BeatmapRepository } from "@Domain/Beatmap/BeatmapRepository";
+import { BeatmapRepository } from "@Domain/Beatmap/Repository/BeatmapRepository";
 
 export class BeatmapController {
     static async processBeatmap(rawBeatmapset: any) {

@@ -4,8 +4,8 @@ import path from 'path';
 import { Environment } from '@Bootstrap/Environment';
 import { OsuApiService } from "@Service/OsuApiService";
 import { DownloadService } from "@Service/DownloadService";
-import { BeatmapsetRepository } from "@Domain/Beatmapset/BeatmapsetRepository";
-import { BeatmapController } from '@Domain/Beatmap/BeatmapController';
+import { BeatmapsetRepository } from "@Domain/Beatmapset/Repository/BeatmapsetRepository";
+import { BeatmapController } from '@Domain/Beatmap/Controller/BeatmapController';
 
 const basePath = path.resolve(__dirname, Environment.env.STORAGE_DIR!);
 

@@ -1,5 +1,5 @@
 import { createPool } from '@Core/Database/Connection';
-import { Beatmapset } from '@Domain/Beatmapset/BeatmapsetModel';
+import { Beatmapset } from '@Domain/Beatmapset/Model/BeatmapsetModel';
 import { Environment } from '@Bootstrap/Environment';
 
 const pool = createPool();
@@ -126,6 +126,22 @@ export class BeatmapsetRepository {
             beatmapset.file_size
         ]);
     }
+
+    static async updateDownloadState(id: bigint, downloaded: boolean, fileSize: bigint | null): Promise<void> {
+        await pool.query(`
+            UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET
+            downloaded = $2,
+            file_size = $3
+            WHERE id = $1
+            `,
+            [
+                id,
+                downloaded,
+                fileSize !== null ? fileSize.toString() : null
+            ]
+        );
+    }
+
 
     static async beatmapsetExists(id: number): Promise<boolean> {
         const res = await pool.query(

@@ -198,18 +198,4 @@ export class BeatmapsetRepository {
             [value, id]
         );
     }
-
-    static async markBeatmapsetDeleted(id: number, value = true): Promise<void> {
-        await pool.query(
-            `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET deleted = $1 WHERE id = $2`,
-            [value, id]
-        );
-    }
-
-    static async markBeatmapsetMissingAudio(id: number, value = true): Promise<void> {
-        await pool.query(
-            `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET missing_audio = $1 WHERE id = $2`,
-            [value, id]
-        );
-    }
 }

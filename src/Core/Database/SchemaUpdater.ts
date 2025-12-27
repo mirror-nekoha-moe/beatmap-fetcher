@@ -3,78 +3,79 @@ import { Schema } from '@Core/Database/Schema';
 import { SchemaInspector } from '@Core/Database/SchemaInspector';
 import { Environment } from '@Bootstrap/Environment';
 
-async function ensurePrimaryKeys(client: PoolClient): Promise<void> {
-	for (const pk of Schema.primaryKeys) {
-		const constraintName = `${pk.table}_pkey`;
-		const exists = await client.query(
-			`SELECT 1 
-			 FROM information_schema.table_constraints
-			 WHERE table_schema='public'
-			   AND table_name=$1
-			   AND constraint_name=$2
-			   AND constraint_type='PRIMARY KEY'`,
-			[pk.table, constraintName]
-		);
-
-		if (exists.rowCount === 0) {
-			console.log(`Adding primary key on ${pk.table}(${pk.column})`);
-			await client.query(`
-				ALTER TABLE public.${pk.table} 
-				ADD CONSTRAINT ${constraintName} PRIMARY KEY (${pk.column})
-			`);
-		}
-	}
-}
-
-async function ensureForeignKeys(client: PoolClient): Promise<void> {
-	for (const fk of Schema.foreignKeys) {
-		const exists = await client.query(
-			`SELECT 1
-			 FROM information_schema.table_constraints tc
-			 JOIN information_schema.key_column_usage kcu
-			   ON tc.constraint_name = kcu.constraint_name
-			  AND tc.table_schema = kcu.table_schema
-			 WHERE tc.table_schema='public'
-			   AND tc.constraint_type='FOREIGN KEY'
-			   AND tc.table_name=$1
-			   AND kcu.column_name=$2
-			   AND kcu.ordinal_position=1`,
-			[fk.sourceTable, fk.sourceColumn]
-		);
-
-		if (exists.rowCount === 0) {
-			console.log(`Creating FK: ${fk.sourceTable}.${fk.sourceColumn} -> ${fk.targetTable}.${fk.targetColumn}`);
-			await client.query(`
-				ALTER TABLE public.${fk.sourceTable}
-				ADD CONSTRAINT ${fk.constraintName}
-				FOREIGN KEY (${fk.sourceColumn})
-				REFERENCES public.${fk.targetTable}(${fk.targetColumn})
-				ON DELETE ${fk.onDelete};
-			`);
-		}
-	}
-}
-
-// Ensure table_stats has exactly one row
-async function ensureStatsRow(client: PoolClient): Promise<void> {
-	const tableName = Environment.env.TABLE_STATS!;
-	const res = await client.query(`SELECT COUNT(*) AS cnt FROM public.${tableName}`);
-	const count = parseInt(res.rows[0].cnt, 10);
-
-	if (count === 0) {
-		console.log(`Inserting initial row into ${tableName}...`);
-		await client.query(`
-			INSERT INTO public.${tableName} (
-				last_beatmapset_id, beatmapset_count, beatmap_count,
-				ranked_count, approved_count, loved_count, graveyard_count
-			) VALUES (0, 0, 0, 0, 0, 0, 0)
-		`);
-	} else if (count > 1) {
-		console.warn(`Table ${tableName} has more than one row (${count}) — only one row is expected`);
-	}
-}
 export class SchemaUpdater {
-	static async initialize(): Promise<void> {
+    static async ensurePrimaryKeys(client: PoolClient): Promise<void> {
+        for (const pk of Schema.primaryKeys) {
+            const constraintName = `${pk.table}_pkey`;
+            const exists = await client.query(
+                `SELECT 1 
+                FROM information_schema.table_constraints
+                WHERE table_schema='public'
+                AND table_name=$1
+                AND constraint_name=$2
+                AND constraint_type='PRIMARY KEY'`,
+                [pk.table, constraintName]
+            );
+
+            if (exists.rowCount === 0) {
+                console.log(`Adding primary key on ${pk.table}(${pk.column})`);
+                await client.query(`
+                    ALTER TABLE public.${pk.table} 
+                    ADD CONSTRAINT ${constraintName} PRIMARY KEY (${pk.column})
+                `);
+            }
+        }
+    }
+
+    static async ensureForeignKeys(client: PoolClient): Promise<void> {
+        for (const fk of Schema.foreignKeys) {
+            const exists = await client.query(
+                `SELECT 1
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.table_schema = kcu.table_schema
+                WHERE tc.table_schema='public'
+                AND tc.constraint_type='FOREIGN KEY'
+                AND tc.table_name=$1
+                AND kcu.column_name=$2
+                AND kcu.ordinal_position=1`,
+                [fk.sourceTable, fk.sourceColumn]
+            );
+
+            if (exists.rowCount === 0) {
+                console.log(`Creating FK: ${fk.sourceTable}.${fk.sourceColumn} -> ${fk.targetTable}.${fk.targetColumn}`);
+                await client.query(`
+                    ALTER TABLE public.${fk.sourceTable}
+                    ADD CONSTRAINT ${fk.constraintName}
+                    FOREIGN KEY (${fk.sourceColumn})
+                    REFERENCES public.${fk.targetTable}(${fk.targetColumn})
+                    ON DELETE ${fk.onDelete};
+                `);
+            }
+        }
+    }
+
+    // Ensure table_stats has exactly one row
+    static async ensureStatsRow(client: PoolClient): Promise<void> {
+        const tableName = Environment.env.TABLE_STATS!;
+        const res = await client.query(`SELECT COUNT(*) AS cnt FROM public.${tableName}`);
+        const count = parseInt(res.rows[0].cnt, 10);
+
+        if (count === 0) {
+            console.log(`Inserting initial row into ${tableName}...`);
+            await client.query(`
+                INSERT INTO public.${tableName} (
+                    last_beatmapset_id, beatmapset_count, beatmap_count,
+                    ranked_count, approved_count, loved_count, graveyard_count
+                ) VALUES (0, 0, 0, 0, 0, 0, 0)
+            `);
+        } else if (count > 1) {
+            console.warn(`Table ${tableName} has more than one row (${count}) — only one row is expected`);
+        }
+    }
+
+    static async initialize(): Promise<void> {
 		const pool = new Pool({
 			host: Environment.env.PG_HOSTNAME,
 			user: Environment.env.PG_USERNAME,
@@ -125,9 +126,9 @@ export class SchemaUpdater {
 					}
 				}
 			}
-			await ensurePrimaryKeys(client);
-			await ensureForeignKeys(client);
-			await ensureStatsRow(client);
+			await this.ensurePrimaryKeys(client);
+			await this.ensureForeignKeys(client);
+			await this.ensureStatsRow(client);
 			console.log('Database schema is fully up to date!');
 		} catch (err) {
 			console.error('Schema update failed:', err instanceof Error ? err.message : err);

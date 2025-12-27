@@ -18,7 +18,8 @@
       "@Core/*": ["Core/*"],
       "@Domain/*": ["Domain/*"],
       "@Bootstrap/*": ["Bootstrap/*"],
-      "@Service/*": ["Service/*"]
+      "@Service/*": ["Service/*"],
+      "@Worker/*": ["Worker/*"]
     }    
   },
   "include": ["src/**/*"],

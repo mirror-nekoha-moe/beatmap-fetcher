@@ -88,8 +88,7 @@ export class BeatmapsetController {
             if (!rawBeatmapset) {
                 const exists = await BeatmapsetRepository.beatmapsetExists(id);
                 if (exists) {
-                    await BeatmapsetRepository.markBeatmapsetDeleted(id, true);
-                    console.warn(chalk.yellow(`Beatmapset ${id} not found → marked as deleted in DB`));
+                    console.warn(chalk.yellow(`Beatmapset ${id} not found, but in DB`));
                 } else {
                     if (Environment.env.DEBUG_LOGGING) {
                         console.log(chalk.gray(`Beatmapset ${id} not found and not in DB`));
@@ -120,18 +119,12 @@ export class BeatmapsetController {
     static async processBeatmapset(rawBeatmapset: any): Promise<any> {
         // Check if we need to re-download and get current state
         const dbRow = await BeatmapsetRepository.getBeatmapsetById(rawBeatmapset.id);
-        let needDownload = false;
-        
-        // Check if download is disabled (missing audio) from API
-        let isMissingAudioFromAPI = rawBeatmapset.availability?.download_disabled === true;
-        const isMissingAudioFromDB = dbRow?.download_disabled === true;
-        const isDcmaFromApi = rawBeatmapset.availability?.more_information?.startsWith("http") ?? false;
-        const moreInformation = rawBeatmapset.availability?.more_information ?? "";
 
-        // Overwrite isMissingAudioFromAPI if dmca is active
-        if (isMissingAudioFromAPI == false && moreInformation.startsWith("http")) {
-            isMissingAudioFromAPI = true;
-        }
+        let needDownload = false;        
+        const isUnavailable =
+            rawBeatmapset.deleted_at != null ||
+            rawBeatmapset.availability?.download_disabled === true ||
+            rawBeatmapset.availability?.more_information?.startsWith("http") === true;
 
         // Check if file actually exists on disk
         const folderPath = path.join(basePath, String(rawBeatmapset.id));
@@ -142,11 +135,13 @@ export class BeatmapsetController {
 
         if (!dbRow) {
             // New beatmapset, needs download (unless missing audio from API)
-            needDownload = !isMissingAudioFromAPI;
+            needDownload = !isUnavailable
         } else {
-            // Skip download if already marked as missing_audio in database AND API still says it's disabled
-            // (If API says it's now available, we should try to download even if DB had it marked as missing)
-            if (isMissingAudioFromDB && isMissingAudioFromAPI) {
+            if (isUnavailable) {
+                // Became DMCA or deleted later
+                // NEVER:
+                // - re-download
+                // - flip downloaded=false            
                 needDownload = false;
             } else if (dbRow.downloaded && fileExistsOnDisk) {
                 // Already downloaded and file exists, check if there are updates
@@ -154,23 +149,35 @@ export class BeatmapsetController {
                 const dbUpdated = dbRow.last_updated ? new Date(dbRow.last_updated) : null;
 
                 // Only re-download if there are updates
-                if (dbUpdated && apiUpdated > dbUpdated && !isMissingAudioFromAPI) {
+                if (dbUpdated && apiUpdated > dbUpdated) {
                     needDownload = true;
                 }
             } else if (!dbRow.downloaded && fileExistsOnDisk) {
                 // File exists on disk but DB says not downloaded - fix the DB state
+                downloadedState = true;
                 needDownload = false;
-                downloadedState = true;  // Update state so insertBeatmapset() will persist it
                 console.log(chalk.blue(`Fixed DB state for beatmapset ${rawBeatmapset.id} (file exists, marked as downloaded)`));
-            } else {
+            } else if (!fileExistsOnDisk) {
                 // Not downloaded yet or file missing, download it (unless missing audio)
-                needDownload = !isMissingAudioFromAPI;
+                needDownload = true;
             }
         }
 
         const beatmapset = {
             ...rawBeatmapset,
-            mode_osu: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'osu').length ?? 0,
+            cover:          rawBeatmapset.covers.cover ?? null,
+            cover_2x:       rawBeatmapset.covers["cover@2x"] ?? null,
+            card:           rawBeatmapset.covers.card ?? null,
+            card_2x:        rawBeatmapset.covers["card@2x"] ?? null,
+            list:           rawBeatmapset.covers.list ?? null,
+            list_2x:        rawBeatmapset.covers["list@2x"] ?? null,
+            slimcover:      rawBeatmapset.covers.slimcover ?? null,
+            slimcover_2x:   rawBeatmapset.covers["slimcover@2x"] ?? null,
+
+            download_disabled: rawBeatmapset.availability.download_disabled ?? null,
+            more_information: rawBeatmapset.availability.more_information ?? null,
+
+            mode_osu_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'osu').length ?? 0,
             mode_taiko_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'taiko').length ?? 0,
             mode_fruits_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'fruits').length ?? 0,
             mode_mania_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'mania').length ?? 0,
@@ -187,7 +194,7 @@ export class BeatmapsetController {
         }
 
         // Download if needed and not missing audio
-        if (needDownload && !beatmapset.missing_audio) {
+        if (needDownload) {
             try {
                 const downloadUrl = await DownloadService.getDownloadUrl(rawBeatmapset.id);
                 const { filePath, fileSize } = await DownloadService.downloadBeatmapset(downloadUrl, rawBeatmapset.id);
@@ -198,14 +205,11 @@ export class BeatmapsetController {
                 
                 await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, true);
             } catch (dlErr) {
-                // If download fails, mark as missing_audio
-                console.warn(chalk.yellow(`Download failed for beatmapset ${rawBeatmapset.id}:`), dlErr instanceof Error ? dlErr.message : dlErr);
-                beatmapset.missing_audio = true;
-                await BeatmapsetRepository.markBeatmapsetMissingAudio(rawBeatmapset.id, true);
-            }
-        } else if (isMissingAudioFromAPI && isMissingAudioFromDB) {
-            // Skip download - API confirms audio is still unavailable
-            console.log(chalk.gray(`Skipped download for beatmapset ${rawBeatmapset.id} (map or audio unavailable)`));
+                console.warn(
+                    chalk.yellow(`Download failed for beatmapset ${rawBeatmapset.id}:`),
+                    dlErr instanceof Error ? dlErr.message : dlErr
+                );
+            }        
         } else if (fileExistsOnDisk && (!dbRow?.file_size || dbRow.file_size === null)) {
             // File exists but we don't have size recorded - get it from disk
             try {
@@ -221,9 +225,6 @@ export class BeatmapsetController {
                 // Ignore errors reading file size
             }
         }
-
-        // Always mark as not deleted since API returned it
-        await BeatmapsetRepository.markBeatmapsetDeleted(rawBeatmapset.id, false);
 
         console.log(chalk.green(`Processed beatmapset ${chalk.white(rawBeatmapset.id)} (${chalk.white(beatmapset.title)} - ${chalk.white(beatmapset.artist)})`));
         return beatmapset;
@@ -281,10 +282,6 @@ export class BeatmapsetController {
                         const beatmapset = beatmapsetMap.get(id);
                         if (beatmapset) {
                             await this.processBeatmapset(beatmapset);
-                        } else {
-                            // If not in batch response, it's deleted
-                            await BeatmapsetRepository.markBeatmapsetDeleted(id, true);
-                            console.warn(chalk.yellow(`Beatmapset ${id} not found → marked as deleted`));
                         }
                     }
                 } catch (err) {

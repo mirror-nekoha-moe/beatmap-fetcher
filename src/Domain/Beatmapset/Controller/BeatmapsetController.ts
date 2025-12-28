@@ -209,6 +209,16 @@ export class BeatmapsetController {
                     chalk.yellow(`Download failed for beatmapset ${rawBeatmapset.id}:`),
                     dlErr instanceof Error ? dlErr.message : dlErr
                 );
+
+                // Re-check if the file exists
+                const fileStillExists = fs.existsSync(folderPath) && fs.readdirSync(folderPath).some(f => f.endsWith('.osz'));
+
+                // If the file does not exist, mark as not downloaded
+                if (!fileStillExists) {
+                    downloadedState = false;
+                    beatmapset.downloaded = false;
+                    await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, false);
+                }
             }        
         } else if (fileExistsOnDisk && (!dbRow?.file_size || dbRow.file_size === null)) {
             // File exists but we don't have size recorded - get it from disk

@@ -178,6 +178,8 @@ export class BeatmapsetController {
             download_disabled: rawBeatmapset.availability.download_disabled ?? null,
             more_information: rawBeatmapset.availability.more_information ?? null,
 
+            beatmap_count:  rawBeatmapset.beatmaps?.length ?? 0,
+
             mode_osu_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'osu').length ?? 0,
             mode_taiko_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'taiko').length ?? 0,
             mode_fruits_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'fruits').length ?? 0,

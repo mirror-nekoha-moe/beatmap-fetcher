@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "start": "NODE_ENV=production node dist/Index.js",
-    "dev": "NODE_ENV=development ts-node src/Index.ts",
+    "dev": "NODE_ENV=development ts-node -r tsconfig-paths/register src/Index.ts",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "build:watch": "tsc --watch"

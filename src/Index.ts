@@ -1,13 +1,14 @@
-import { SchemaUpdater } from '@Core/Database/SchemaUpdater';
-import { Logger } from '@Core/Logging/Logger';
 import { Environment } from '@Bootstrap/Environment';
-import { TaskRunner } from '@Task/TaskRunner';
 
 async function main(): Promise<void> {
-    Logger.hookConsole();
-
-    console.log("[ beatmap-fetcher ]");
     await Environment.initialize();
+
+    const { SchemaUpdater } = await import('@Core/Database/SchemaUpdater');
+    const { Logger } = await import('@Core/Logging/Logger');
+    const { TaskRunner } = await import('@Task/TaskRunner');
+
+    Logger.hookConsole();
+    console.log("[ beatmap-fetcher ]");
     await SchemaUpdater.initialize();
     TaskRunner.run();
     console.log("main() execution done.");   

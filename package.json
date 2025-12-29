@@ -1,11 +1,11 @@
 {
   "name": "beatmap-fetcher",
   "version": "0.0.1",
-  "main": "dist/index.js",
+  "main": "dist/Index.js",
   "scripts": {
     "build": "tsc",
-    "start": "NODE_ENV=production node dist/index.js",
-    "dev": "NODE_ENV=development ts-node src/index.ts",
+    "start": "NODE_ENV=production node dist/Index.js",
+    "dev": "NODE_ENV=development ts-node src/Index.ts",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "build:watch": "tsc --watch"

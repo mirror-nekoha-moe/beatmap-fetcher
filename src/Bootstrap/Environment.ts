@@ -9,7 +9,7 @@ export class Environment {
         console.log("Loading Environment variables...");
 
         const nodeEnv = process.env.NODE_ENV ?? "development";
-        const envPath = path.resolve(process.cwd(), `.env.${nodeEnv}`);
+        const envPath = path.resolve(__dirname, `../.env.${nodeEnv}`);
         console.log(`Looking for env file at: ${envPath}`);
 
         dotenv.config({ path: envPath, override: true });

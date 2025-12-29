@@ -163,16 +163,17 @@ export class BeatmapsetController {
             }
         }
 
+        // Create flatten out beatmapset object
         const beatmapset = {
             ...rawBeatmapset,
-            cover:          rawBeatmapset.covers.cover ?? null,
-            cover_2x:       rawBeatmapset.covers["cover@2x"] ?? null,
-            card:           rawBeatmapset.covers.card ?? null,
-            card_2x:        rawBeatmapset.covers["card@2x"] ?? null,
-            list:           rawBeatmapset.covers.list ?? null,
-            list_2x:        rawBeatmapset.covers["list@2x"] ?? null,
-            slimcover:      rawBeatmapset.covers.slimcover ?? null,
-            slimcover_2x:   rawBeatmapset.covers["slimcover@2x"] ?? null,
+            card:           rawBeatmapset?.covers?.card ?? null,
+            card_2x:        rawBeatmapset?.covers?.["card@2x"] ?? null,
+            cover:          rawBeatmapset?.covers?.cover ?? null,
+            cover_2x:       rawBeatmapset?.covers?.["cover@2x"] ?? null,
+            list:           rawBeatmapset?.covers?.list ?? null,
+            list_2x:        rawBeatmapset?.covers?.["list@2x"] ?? null,
+            slimcover:      rawBeatmapset?.covers?.slimcover ?? null,
+            slimcover_2x:   rawBeatmapset?.covers?.["slimcover@2x"] ?? null,
 
             download_disabled: rawBeatmapset.availability.download_disabled ?? null,
             more_information: rawBeatmapset.availability.more_information ?? null,
@@ -181,8 +182,9 @@ export class BeatmapsetController {
             mode_taiko_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'taiko').length ?? 0,
             mode_fruits_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'fruits').length ?? 0,
             mode_mania_count: rawBeatmapset.beatmaps?.filter((bm: any) => bm.mode === 'mania').length ?? 0,
-            downloaded: downloadedState,             // Use corrected state
-            file_size: dbRow?.file_size ?? null      // Preserve existing file_size from DB (API doesn't provide this)
+
+            downloaded: downloadedState,
+            file_size: dbRow?.file_size ?? null
         };
         
         // Insert or update beatmapset

@@ -16,7 +16,6 @@ export class BeatmapsetController {
     * Used for initial scrape by incrementing set id
     */
     static async findNextHighestBeatmapset(currentHighestId: number): Promise<number> {
-        let osuApiInstance = await OsuApiService.v2.getApiInstance();
         let step = 10000; // How many sequential IDs to check
         let newHighest = currentHighestId;
         let foundAny = false;

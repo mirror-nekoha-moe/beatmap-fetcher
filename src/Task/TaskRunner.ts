@@ -15,7 +15,7 @@ export class TaskRunner {
             StatsUpdater.run(5, 1);
             BeatmapsetUpdater.run(1, 30);
             BeatmapsetFetcher.run(1, 10);
-            RecentScanner.run(60, 10);
+            RecentScanner.run(1440, 10);
             MissingScanner.run(1440, 10);
         } catch (err) {
             console.error(chalk.red("TaskRunner encountered an error:"), err instanceof Error ? err.message : err);

@@ -38,6 +38,7 @@ RUN npm prune --production
 
 # Set environment
 ENV NODE_ENV=production
+ENV TS_NODE_BASEURL=/app/dist
 
 # Run the application
 CMD ["npm", "start"]

@@ -22,9 +22,9 @@ export class MissingScanner {
 
     private static fileExistsForBeatmapset(beatmapsetId: number): string | null {
         const folderPath = path.resolve(String(process.env.STORAGE_DIR), String(beatmapsetId));
-        console.log(chalk.blue(`[DEBUG] Checking folder: ${folderPath}`));
+        console.log(chalk.blue(`Checking folder: ${folderPath}`));
         if (!fs.existsSync(folderPath)) {
-            console.log(chalk.yellow(`[DEBUG] Folder does not exist: ${folderPath}`));
+            console.log(chalk.yellow(`Folder does not exist: ${folderPath}`));
             return null;
         }
         const files = fs.readdirSync(folderPath);
@@ -32,7 +32,7 @@ export class MissingScanner {
         console.log(chalk.blue(`[DEBUG] Files in folder: ${JSON.stringify(fullPaths)}`));
         const oszFiles = fullPaths.filter(f => f.endsWith('.osz'));
         if (oszFiles.length === 0) {
-            console.log(chalk.yellow(`[DEBUG] No .osz files found in: ${folderPath}`));
+            console.log(chalk.yellow(`No .osz files found in: ${folderPath}`));
             return null;
         }
         return oszFiles[0];
@@ -48,7 +48,7 @@ export class MissingScanner {
                     await this.updateDbAfterDownload(beatmapset.id, filePath);
                     fixed++;
                 } else {
-                    console.log(chalk.gray(`No file found for beatmapset ${beatmapset.id}`));
+                    // console.log(chalk.gray(`No file found for beatmapset ${beatmapset.id}`));
                 }
             }
         console.log(chalk.green(`Done rechecking missing maps. Fixed ${fixed} beatmapsets.`));

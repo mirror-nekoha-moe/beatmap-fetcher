@@ -312,15 +312,15 @@ export class BeatmapsetController {
 
     /**
     * Scan recently ranked/loved beatmapsets to catch old maps that got ranked late
-    * Uses v1 API to get maps ranked in last 30 days by date
+    * Uses v1 API to get maps ranked in last 14 days by date
     */
     static async scanRecentlyRankedBeatmapsets(): Promise<void> {
         try {
-            console.log(chalk.cyan("Scanning recently ranked beatmapsets (last 30 days)..."));
+            console.log(chalk.cyan("Scanning recently ranked beatmapsets (last 14 days)..."));
 
             const today = new Date();
-            // Go back 30 days
-            for (let offset = 0; offset < 30; offset++) {
+            // Go back 14 days
+            for (let offset = 0; offset < 14; offset++) {
                 const day = new Date(today);
                 day.setDate(today.getDate() - offset);
                 // Format as YYYY-MM-DD 00:00:00
@@ -363,7 +363,7 @@ export class BeatmapsetController {
                 }
             }
 
-            console.log(chalk.green("Finished scanning recently ranked beatmapsets (last 21 days)"));
+            console.log(chalk.green("Finished scanning recently ranked beatmapsets (last 14 days)"));
         } catch (err) {
             console.error(chalk.red("Error in scanRecentlyRankedBeatmapsets:"), err instanceof Error ? err.message : err);
         }

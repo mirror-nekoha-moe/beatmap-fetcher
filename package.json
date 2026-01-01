@@ -4,7 +4,7 @@
   "main": "dist/Index.js",
   "scripts": {
     "build": "tsc",
-    "start": "NODE_ENV=production node dist/Index.js",
+    "start": "NODE_ENV=production node -r tsconfig-paths/register dist/Index.js",
     "dev": "NODE_ENV=development ts-node -r tsconfig-paths/register src/Index.ts",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
@@ -14,16 +14,16 @@
     "chalk": "^4.1.2",
     "dotenv": "^17.2.3",
     "node-libcurl": "^4.1.0",
-    "osu-api-v2-js": "^2.1.2",
-    "pg": "^8.16.3"
+    "osu-api-v2-js": "^2.1.5",
+    "pg": "^8.16.3",
+    "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
-    "@types/node": "^24.9.2",
+    "@types/node": "^24.10.4",
     "@types/node-fetch": "^2.6.13",
     "@types/pg": "^8.15.6",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3"
   },
   "description": "",

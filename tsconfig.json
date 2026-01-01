@@ -19,7 +19,8 @@
       "@Domain/*": ["Domain/*"],
       "@Bootstrap/*": ["Bootstrap/*"],
       "@Service/*": ["Service/*"],
-      "@Task/*": ["Task/*"]
+      "@Task/*": ["Task/*"],
+      "@Test/*": ["Test/*"]
     }    
   },
   "include": ["src/**/*"],

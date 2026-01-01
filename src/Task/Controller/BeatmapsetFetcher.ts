@@ -14,7 +14,7 @@ export class BeatmapsetFetcher {
             const cursor = await StatsRepository.getScanCursor();
             
             if (cursor !== config.highestKnownBeatmapsetId) {
-                console.log(chalk.cyan(`Updated scan cursor: ${config.highestKnownBeatmapsetId} → ${cursor}`));
+                console.log(chalk.cyan(`Updated scan cursor: ${config.highestKnownBeatmapsetId} -> ${cursor}`));
                 config.highestKnownBeatmapsetId = cursor;
             } else {
                 console.log(chalk.gray(`Scan cursor unchanged: ${config.highestKnownBeatmapsetId}`));
@@ -28,13 +28,11 @@ export class BeatmapsetFetcher {
 
     private static async refreshNewBeatmapsets(): Promise<void> {
         // const currentHighest = config.highestKnownBeatmapsetId || 0;
-        const currentHighest = await StatsRepository.getScanCursor() || 0;
+        const currentHighest = Number(await StatsRepository.getScanCursor() ?? 0);
         const newHighest = await BeatmapsetController.findNextHighestBeatmapset(currentHighest);
 
         if (newHighest > currentHighest) {
-            console.log(chalk.green(`Highest beatmapset updated: ${currentHighest} → ${newHighest}`));
-            // config.highestKnownBeatmapsetId = newHighest;
-            // Persist the scan cursor to database
+            console.log(chalk.green(`Highest beatmapset updated: ${currentHighest} -> ${newHighest}`));
             await StatsRepository.updateScanCursor(newHighest);
         } else {
             console.log(chalk.gray(`No new beatmapsets beyond ${currentHighest}`));

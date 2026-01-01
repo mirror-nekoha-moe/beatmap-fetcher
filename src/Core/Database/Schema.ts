@@ -143,7 +143,16 @@ export class Schema {
                 bm_wip_count bigint NULL DEFAULT 0,
                 bm_qualified_count bigint NULL DEFAULT 0,
                 bm_pending_count bigint NULL DEFAULT 0,
+
                 missing_beatmapsets bigint NULL DEFAULT 0,
+                missing_beatmapsets_ranked bigint NULL DEFAULT 0,
+                missing_beatmapsets_approved bigint NULL DEFAULT 0,
+                missing_beatmapsets_loved bigint NULL DEFAULT 0,
+                missing_beatmapsets_graveyard bigint NULL DEFAULT 0,
+                missing_beatmapsets_pending bigint NULL DEFAULT 0,
+                missing_beatmapsets_wip bigint NULL DEFAULT 0,
+                missing_beatmapsets_qualified bigint NULL DEFAULT 0,
+
                 osu_bm_ranked_count bigint NULL DEFAULT 0,
                 osu_bm_approved_count bigint NULL DEFAULT 0,
                 osu_bm_loved_count bigint NULL DEFAULT 0,

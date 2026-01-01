@@ -31,6 +31,13 @@ export interface Stats {
     bm_qualified_count: bigint;
 
     missing_beatmapsets: bigint;
+    missing_beatmapsets_ranked: bigint;
+    missing_beatmapsets_approved: bigint;
+    missing_beatmapsets_loved: bigint;
+    missing_beatmapsets_graveyard: bigint;
+    missing_beatmapsets_pending: bigint;
+    missing_beatmapsets_wip: bigint;
+    missing_beatmapsets_qualified: bigint;
 
     osu_bm_ranked_count: bigint;
     osu_bm_approved_count: bigint;

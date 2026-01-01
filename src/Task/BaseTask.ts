@@ -53,6 +53,6 @@ export abstract class BaseTask {
         };
 
         console.log(chalk.cyan(`Starting Task::${taskName}`));
-        await execute();
+        void execute();
     }
 }

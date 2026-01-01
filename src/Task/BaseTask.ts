@@ -2,43 +2,40 @@ import chalk from 'chalk';
 
 export abstract class BaseTask {
     static async runTask(interval: number, errorDelay: number, taskName: string, task: () => Promise<void>): Promise<void> {
-        let intervalHandle: NodeJS.Timeout | null = null;
-        let retryHandle: NodeJS.Timeout | null = null;
+        let timer: NodeJS.Timeout | null = null;
         let inErrorBackoff = false;
+        let running = false;
 
-        const startInterval = () => {
-            if (intervalHandle) return;
-            intervalHandle = setInterval(execute, interval);
+        const schedule = (delay: number) => {
+            if (timer) return;
+
+            timer = setTimeout(async () => {
+                timer = null;
+                await execute();
+            }, delay);
         };
 
         const execute = async (): Promise<void> => {
+            if (running) return;
+
+            running = true;
+
             try {
                 await task();
 
-                // Recover from error state
                 if (inErrorBackoff) {
                     console.log(
                         chalk.green(`Task::${taskName} recovered, resuming normal schedule`)
                     );
                     inErrorBackoff = false;
-
-                    if (retryHandle) {
-                        clearTimeout(retryHandle);
-                        retryHandle = null;
-                    }
-
-                    startInterval();
                 }
+
+                schedule(interval);
             } catch (err) {
                 console.error(
                     chalk.red(`Task::${taskName} encountered an error:`),
                     err instanceof Error ? err.message : err
                 );
-
-                if (intervalHandle) {
-                    clearInterval(intervalHandle);
-                    intervalHandle = null;
-                }
 
                 if (!inErrorBackoff) {
                     inErrorBackoff = true;
@@ -49,22 +46,13 @@ export abstract class BaseTask {
                     );
                 }
 
-                if (!retryHandle) {
-                    retryHandle = setTimeout(async () => {
-                        retryHandle = null;
-                        await execute();
-                    }, errorDelay);
-                }
+                schedule(errorDelay);
+            } finally {
+                running = false;
             }
         };
 
         console.log(chalk.cyan(`Starting Task::${taskName}`));
-
-        // Run immediately
         await execute();
-
-        if (!inErrorBackoff) {
-            startInterval();
-        }
     }
 }

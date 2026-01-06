@@ -27,10 +27,11 @@ export class BeatmapsetController {
             try {
                 // Add delay between requests (500ms)
                 if (id > currentHighestId + 1) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    // !!!!! MOVE TO ENV
+                    await new Promise(resolve => setTimeout(resolve, 250));
                 }
 
-                const beatmapset = await this.fetchBeatmapsetFromOsu(id);
+                const beatmapset = await this.fetchBeatmapsetFromOsu(id, false);
                 if (beatmapset) {
                     newHighest = id;
                     foundAny = true;
@@ -56,7 +57,7 @@ export class BeatmapsetController {
         return newHighest;
     }
   
-    static async fetchBeatmapsetFromOsu(id: number): Promise<any> {
+    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean): Promise<any> {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
   
         try {
@@ -105,7 +106,7 @@ export class BeatmapsetController {
                 return null;
             }
 
-            return await this.processBeatmapset(rawBeatmapset);
+            return await this.processBeatmapset(rawBeatmapset, allowDownload);
         } catch (err) {
             console.error(chalk.red(`Failed to fetch beatmapset ${id}:`), err instanceof Error ? err.message : err);
             return null;
@@ -115,7 +116,7 @@ export class BeatmapsetController {
     /**
     * Beatmapset processer
     */
-    static async processBeatmapset(rawBeatmapset: any): Promise<any> {
+    static async processBeatmapset(rawBeatmapset: any, allowDownload: boolean): Promise<any> {
         // Check if we need to re-download and get current state
         const dbRow = await BeatmapsetRepository.getBeatmapsetById(rawBeatmapset.id);
 
@@ -199,11 +200,19 @@ export class BeatmapsetController {
         // Download if needed and not missing audio
         if (needDownload) {
             try {
-                const downloadUrl = await DownloadService.getDownloadUrl(rawBeatmapset.id);
-                const { filePath, fileSize } = await DownloadService.downloadBeatmapset(downloadUrl, rawBeatmapset.id);
                 
-                // Update beatmapset with file size
-                beatmapset.file_size = fileSize;
+                if (allowDownload === true) {
+                    if (rawBeatmapset.status == "graveyard" || rawBeatmapset.status == "wip" || rawBeatmapset.status == "pending" || rawBeatmapset.status == "qualified") {
+                        const { filePath, fileSize } = await DownloadService.downloadBeatmapsetExternal(rawBeatmapset.id);
+                        beatmapset.file_size = fileSize;
+                    } else {
+                        const downloadUrl = await DownloadService.getDownloadUrl(rawBeatmapset.id);
+                        const { filePath, fileSize } = await DownloadService.downloadBeatmapset(downloadUrl, rawBeatmapset.id);
+                        // Update beatmapset with file size
+                        beatmapset.file_size = fileSize;
+                    }
+                }
+                
                 await BeatmapsetRepository.insertBeatmapset(beatmapset);
                 
                 await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, true);
@@ -294,7 +303,10 @@ export class BeatmapsetController {
                     for (const id of batchIds) {
                         const beatmapset = beatmapsetMap.get(id);
                         if (beatmapset) {
-                            await this.processBeatmapset(beatmapset);
+                            await this.processBeatmapset(beatmapset, true);
+
+                            // !!!!! MOVE TO ENV
+                            await new Promise(resolve => setTimeout(resolve, 100));
                         }
                     }
                 } catch (err) {
@@ -352,7 +364,7 @@ export class BeatmapsetController {
 
                         if (!exists) {
                             console.log(chalk.yellow(`Found missing beatmapset: ${beatmapsetId}`));
-                            await this.fetchBeatmapsetFromOsu(beatmapsetId);
+                            await this.fetchBeatmapsetFromOsu(beatmapsetId, true);
                         }
 
                         // Small delay to avoid rate limiting

@@ -203,8 +203,7 @@ export class BeatmapsetController {
                 
                 if (allowDownload === true) {
                     if (rawBeatmapset.status == "graveyard" || rawBeatmapset.status == "wip" || rawBeatmapset.status == "pending" || rawBeatmapset.status == "qualified") {
-                        const { filePath, fileSize } = await DownloadService.downloadBeatmapsetExternal(rawBeatmapset.id);
-                        beatmapset.file_size = fileSize;
+                        // TODO: find alternative way to download graveyard maps, instead of downloading from mirrors
                     } else {
                         const downloadUrl = await DownloadService.getDownloadUrl(rawBeatmapset.id);
                         const { filePath, fileSize } = await DownloadService.downloadBeatmapset(downloadUrl, rawBeatmapset.id);
@@ -306,7 +305,7 @@ export class BeatmapsetController {
                             await this.processBeatmapset(beatmapset, true);
 
                             // !!!!! MOVE TO ENV
-                            await new Promise(resolve => setTimeout(resolve, 100));
+                            await new Promise(resolve => setTimeout(resolve, 50));
                         }
                     }
                 } catch (err) {

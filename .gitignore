@@ -6,3 +6,4 @@
 /dist
 /src/.env.production
 /src/.env.development
+beatmapsetEvents.json

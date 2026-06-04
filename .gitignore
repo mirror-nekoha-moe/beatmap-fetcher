@@ -8,3 +8,4 @@
 /src/.env.development
 beatmapsetEvents.json
 src/BuildInfo.ts
+.build-number

@@ -73,7 +73,15 @@ export class StatsRepository {
                     (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 'graveyard' AND mode_int = 3) AS mania_bm_graveyard_count,
                     (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 'wip' AND mode_int = 3) AS mania_bm_wip_count,
                     (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 'qualified' AND mode_int = 3) AS mania_bm_qualified_count,
-                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 'pending' AND mode_int = 3) AS mania_bm_pending_count
+                    (SELECT COUNT(*) FROM public.${Environment.env.TABLE_BEATMAP} WHERE status = 'pending' AND mode_int = 3) AS mania_bm_pending_count,
+
+                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL AND status = 'ranked') AS size_ranked,
+                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL AND status = 'approved') AS size_approved,
+                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL AND status = 'loved') AS size_loved,
+                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL AND status = 'graveyard') AS size_graveyard,
+                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL AND status = 'wip') AS size_wip,
+                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL AND status = 'qualified') AS size_qualified,
+                    (SELECT COALESCE(SUM(file_size),0) FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = true AND file_size IS NOT NULL AND status = 'pending') AS size_pending
             `);
 
             const stats = res.rows[0];
@@ -133,7 +141,14 @@ export class StatsRepository {
                     mania_bm_graveyard_count = $51,
                     mania_bm_wip_count = $52,
                     mania_bm_qualified_count = $53,
-                    mania_bm_pending_count = $54
+                    mania_bm_pending_count = $54,
+                    size_ranked = $55,
+                    size_approved = $56,
+                    size_loved = $57,
+                    size_graveyard = $58,
+                    size_wip = $59,
+                    size_qualified = $60,
+                    size_pending = $61
             `, [
                 stats.last_beatmapset_id,
                 stats.beatmapset_count,
@@ -188,7 +203,14 @@ export class StatsRepository {
                 stats.mania_bm_graveyard_count,
                 stats.mania_bm_wip_count,
                 stats.mania_bm_qualified_count,
-                stats.mania_bm_pending_count
+                stats.mania_bm_pending_count,
+                stats.size_ranked,
+                stats.size_approved,
+                stats.size_loved,
+                stats.size_graveyard,
+                stats.size_wip,
+                stats.size_qualified,
+                stats.size_pending,
             ]);
 
             return stats;

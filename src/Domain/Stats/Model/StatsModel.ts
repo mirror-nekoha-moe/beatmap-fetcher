@@ -70,4 +70,12 @@ export interface Stats {
     mania_bm_pending_count: bigint;
     mania_bm_wip_count: bigint;
     mania_bm_qualified_count: bigint;
+
+    size_ranked: bigint;
+    size_approved: bigint;
+    size_loved: bigint;
+    size_graveyard: bigint;
+    size_wip: bigint;
+    size_qualified: bigint;
+    size_pending: bigint;
 }

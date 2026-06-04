@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 export abstract class BaseTask {
-    static async runTask(interval: number, errorDelay: number, taskName: string, task: () => Promise<void>): Promise<void> {
+    static async runTask(interval: number, errorDelay: number, taskName: string, task: () => Promise<void>, initialDelay?: number): Promise<void> {
         let timer: NodeJS.Timeout | null = null;
         let inErrorBackoff = false;
         let running = false;
@@ -53,6 +53,11 @@ export abstract class BaseTask {
         };
 
         console.log(chalk.cyan(`Starting Task::${taskName}`));
-        void execute();
+        if (initialDelay && initialDelay > 0) {
+            console.log(chalk.yellow(`Task::${taskName} delayed by ${initialDelay / 60000} minutes before first run`));
+            schedule(initialDelay);
+        } else {
+            void execute();
+        }
     }
 }

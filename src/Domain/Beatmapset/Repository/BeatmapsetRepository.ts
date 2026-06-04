@@ -202,6 +202,35 @@ export class BeatmapsetRepository {
         return res.rows.map(r => Number(r.id));
     }
 
+    /**
+     * Returns only beatmapset IDs worth periodically re-checking from the API:
+     * - qualified maps (volatile status, may rank or disqualify)
+     * - pending/wip maps (may become ranked)
+     * - any map with downloaded=false (needs download retry)
+     * - ranked/loved/approved maps updated in the last 6 months (recently touched)
+     *
+     * Skips stable old ranked/loved maps that virtually never change.
+     */
+    static async getQualifiedBeatmapsetIds(): Promise<number[]> {
+        const res = await pool.query(
+            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET}
+             WHERE status = 'qualified'
+             ORDER BY id ASC`
+        );
+        return res.rows.map(r => Number(r.id));
+    }
+
+    static async getBeatmapsetsNeedingRefresh(): Promise<number[]> {
+        const res = await pool.query(
+            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET}
+             WHERE status IN ('qualified', 'pending', 'wip')
+                OR downloaded = false
+                OR (status IN ('ranked', 'loved', 'approved') AND last_updated >= NOW() - INTERVAL '6 months')
+             ORDER BY id ASC`
+        );
+        return res.rows.map(r => Number(r.id));
+    }
+
     static async getHighestBeatmapsetId(): Promise<number> {
         const res = await pool.query(
             `SELECT COALESCE(MAX(id), 0) AS max FROM public.${Environment.env.TABLE_BEATMAPSET}`
@@ -212,6 +241,32 @@ export class BeatmapsetRepository {
     static async getMissingBeatmapsets(): Promise<{ id: number }[]> {
         const res = await pool.query(
             `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = false ORDER BY id ASC`
+        );
+        return res.rows;
+    }
+
+    static async getMissingByStatuses(statuses: string[]): Promise<{ id: number }[]> {
+        const placeholders = statuses.map((_, i) => `$${i + 1}`).join(', ');
+        const res = await pool.query(
+            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET}
+             WHERE downloaded = false
+               AND status IN (${placeholders})
+             ORDER BY id ASC`,
+            statuses
+        );
+        return res.rows;
+    }
+
+    static async getUndownloadedByStatuses(statuses: string[], limit: number): Promise<{ id: number }[]> {
+        const placeholders = statuses.map((_, i) => `$${i + 1}`).join(', ');
+        const res = await pool.query(
+            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET}
+             WHERE downloaded = false
+               AND download_disabled = false
+               AND status IN (${placeholders})
+             ORDER BY id ASC
+             LIMIT $${statuses.length + 1}`,
+            [...statuses, limit]
         );
         return res.rows;
     }

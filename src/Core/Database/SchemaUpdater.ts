@@ -71,7 +71,7 @@ export class SchemaUpdater {
                 ) VALUES (0, 0, 0, 0, 0, 0, 0)
             `);
         } else if (count > 1) {
-            console.warn(`Table ${tableName} has more than one row (${count}) — only one row is expected`);
+            console.warn(`Table ${tableName} has more than one row (${count}) - only one row is expected`);
         }
     }
 

@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "main": "dist/Index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "node prebuild.js && tsc",
     "start": "NODE_ENV=production node -r tsconfig-paths/register dist/Index.js",
     "dev": "NODE_ENV=development ts-node -r tsconfig-paths/register src/Index.ts",
     "clean": "rimraf dist",

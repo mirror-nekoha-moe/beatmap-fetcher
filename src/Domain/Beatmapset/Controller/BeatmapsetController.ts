@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import fs from 'fs';
+import fsp from 'fs/promises';
 import path from 'path';
 import { Environment } from '@Bootstrap/Environment';
 import { OsuApiService } from "@Service/OsuApiService";
@@ -57,7 +58,7 @@ export class BeatmapsetController {
         return newHighest;
     }
   
-    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean): Promise<any> {
+    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false): Promise<any> {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
   
         try {
@@ -106,7 +107,7 @@ export class BeatmapsetController {
                 return null;
             }
 
-            return await this.processBeatmapset(rawBeatmapset, allowDownload);
+            return await this.processBeatmapset(rawBeatmapset, allowDownload, forceRedownload);
         } catch (err) {
             console.error(chalk.red(`Failed to fetch beatmapset ${id}:`), err instanceof Error ? err.message : err);
             return null;
@@ -116,7 +117,7 @@ export class BeatmapsetController {
     /**
     * Beatmapset processer
     */
-    static async processBeatmapset(rawBeatmapset: any, allowDownload: boolean): Promise<any> {
+    static async processBeatmapset(rawBeatmapset: any, allowDownload: boolean, forceRedownload: boolean = false): Promise<any> {
         // Check if we need to re-download and get current state
         const dbRow = await BeatmapsetRepository.getBeatmapsetById(rawBeatmapset.id);
 
@@ -126,16 +127,28 @@ export class BeatmapsetController {
             rawBeatmapset.availability?.download_disabled === true ||
             rawBeatmapset.availability?.more_information?.startsWith("http") === true;
 
-        // Check if file actually exists on disk
+        // Check if file actually exists on disk (async to avoid blocking event loop on network mounts)
         const folderPath = path.join(basePath, String(rawBeatmapset.id));
-        const fileExistsOnDisk = fs.existsSync(folderPath) && fs.readdirSync(folderPath).some(file => file.endsWith('.osz'));
+        const fileExistsOnDisk = await fsp.readdir(folderPath)
+            .then(files => files.some(file => file.endsWith('.osz')))
+            .catch(() => false);
+
+        // Force redownload: delete existing .osz files so the normal logic re-downloads
+        if (forceRedownload && fileExistsOnDisk) {
+            console.log(chalk.yellow(`[ForceRedownload] Deleting existing .osz for beatmapset ${rawBeatmapset.id}`));
+            const files = await fsp.readdir(folderPath).catch(() => [] as string[]);
+            for (const file of files.filter(f => f.endsWith('.osz'))) {
+                await fsp.unlink(path.join(folderPath, file)).catch(() => {});
+            }
+            await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, false);
+        }
 
         // Determine the correct downloaded state
         let downloadedState = dbRow?.downloaded ?? false;
 
         if (!dbRow) {
             // New beatmapset, needs download (unless missing audio from API)
-            needDownload = !isUnavailable
+            needDownload = !isUnavailable;
         } else {
             if (isUnavailable) {
                 // Became DMCA or deleted later
@@ -200,21 +213,26 @@ export class BeatmapsetController {
         // Download if needed and not missing audio
         if (needDownload) {
             try {
-                
+                let setDownloadDatabase = false;
                 if (allowDownload === true) {
-                    if (rawBeatmapset.status == "graveyard" || rawBeatmapset.status == "wip" || rawBeatmapset.status == "pending" || rawBeatmapset.status == "qualified") {
-                        // TODO: find alternative way to download graveyard maps, instead of downloading from mirrors
+                    if (rawBeatmapset.status == "graveyard" || rawBeatmapset.status == "wip" || rawBeatmapset.status == "pending") {
+                        // Graveyard/wip/pending maps are downloaded by GraveyardDownloader task
+                        // (400/day) - skip immediate download here
+                        setDownloadDatabase = false;
+                    } else if (rawBeatmapset.status == "qualified") {
+                        // Qualified maps will become ranked (or not) - skip downloading
+                        setDownloadDatabase = false;
                     } else {
                         const downloadUrl = await DownloadService.getDownloadUrl(rawBeatmapset.id);
                         const { filePath, fileSize } = await DownloadService.downloadBeatmapset(downloadUrl, rawBeatmapset.id);
                         // Update beatmapset with file size
                         beatmapset.file_size = fileSize;
+                        setDownloadDatabase = true;
                     }
                 }
                 
                 await BeatmapsetRepository.insertBeatmapset(beatmapset);
-                
-                await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, true);
+                await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, setDownloadDatabase);
             } catch (dlErr) {
                 console.warn(
                     chalk.yellow(`Download failed for beatmapset ${rawBeatmapset.id}:`),
@@ -222,7 +240,9 @@ export class BeatmapsetController {
                 );
 
                 // Re-check if the file exists
-                const fileStillExists = fs.existsSync(folderPath) && fs.readdirSync(folderPath).some(f => f.endsWith('.osz'));
+                const fileStillExists = await fsp.readdir(folderPath)
+                    .then(files => files.some(f => f.endsWith('.osz')))
+                    .catch(() => false);
 
                 // If the file does not exist, mark as not downloaded
                 if (!fileStillExists) {
@@ -234,10 +254,10 @@ export class BeatmapsetController {
         } else if (fileExistsOnDisk && (!dbRow?.file_size || dbRow.file_size === null)) {
             // File exists but we don't have size recorded - get it from disk
             try {
-                const files = fs.readdirSync(folderPath).filter(file => file.endsWith('.osz'));
+                const files = (await fsp.readdir(folderPath)).filter(file => file.endsWith('.osz'));
                 if (files.length > 0) {
                     const filePath = path.join(folderPath, files[0]);
-                    const stats = fs.statSync(filePath);
+                    const stats = await fsp.stat(filePath);
                     beatmapset.file_size = stats.size;
                     await BeatmapsetRepository.insertBeatmapset(beatmapset);
                     console.log(chalk.blue(`Updated file size for beatmapset ${rawBeatmapset.id}: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`));
@@ -259,18 +279,19 @@ export class BeatmapsetController {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
 
         try {
-            // Get all beatmapset IDs from database
-            const ids = await BeatmapsetRepository.getAllBeatmapset();
+            // Get only beatmapsets worth re-checking (qualified, pending/wip, downloaded=false, or recently updated)
+            const ids = await BeatmapsetRepository.getBeatmapsetsNeedingRefresh();
 
-            console.log(chalk.cyan(`Refreshing ${ids.length} beatmapsets from osu! API...`));
+            console.log(chalk.cyan(`Refreshing ${ids.length} beatmapsets from osu! API (filtered)...`));
             
             // Process in batches of 50 (osu! API's maximum batch size)
             for (let i = 0; i < ids.length; i += 50) {
                 const batchIds = ids.slice(i, i + 50);
                 
                 try {
-                    // Fetch beatmapsets with safe concurrency for rate limit (1200/min = 20/sec, target 600/min = 10/sec)
-                    const concurrencyLimit = 10; // 10 requests at a time
+                    // Fetch beatmapsets with low concurrency so BeatmapsetFetcher and RecentScanner
+                    // are not starved. 3 req/sec = 180 req/min, leaves ~1000 req/min for other tasks.
+                    const concurrencyLimit = 3; // 3 requests at a time
                     const beatmapsets = [];
                     
                     // Process in chunks optimized for rate limit
@@ -323,15 +344,19 @@ export class BeatmapsetController {
 
     /**
     * Scan recently ranked/loved beatmapsets to catch old maps that got ranked late
-    * Uses v1 API to get maps ranked in last 14 days by date
+    * Uses v1 API to get maps ranked in last N days by date
+    * Deduplicates IDs across all days before processing to avoid redundant API calls
     */
-    static async scanRecentlyRankedBeatmapsets(): Promise<void> {
+    static async scanRecentlyRankedBeatmapsets(scanDays?: number): Promise<void> {
+        const SCAN_DAYS = scanDays ?? 14;
         try {
-            console.log(chalk.cyan("Scanning recently ranked beatmapsets (last 14 days)..."));
+            console.log(chalk.cyan(`Scanning recently ranked beatmapsets (last ${SCAN_DAYS} days)...`));
 
             const today = new Date();
-            // Go back 14 days
-            for (let offset = 0; offset < 14; offset++) {
+            const allBeatmapsetIds = new Set<number>();
+
+            // Collect all beatmapset IDs across all days first, then deduplicate
+            for (let offset = 0; offset < SCAN_DAYS; offset++) {
                 const day = new Date(today);
                 day.setDate(today.getDate() - offset);
                 // Format as YYYY-MM-DD 00:00:00
@@ -343,38 +368,31 @@ export class BeatmapsetController {
                     if (!Array.isArray(beatmaps)) {
                         throw new Error("API response is not an array");
                     }
-                    console.log(chalk.cyan(`Day ${sinceDate}: Found ${beatmaps.length} Beatmaps from v1 API`));
 
-                    // Group beatmaps by beatmapset_id, only numeric IDs
-                    const beatmapsetIds = new Set<number>();
+                    let newThisDay = 0;
                     for (const beatmap of beatmaps) {
                         const id = Number(beatmap.beatmapset_id);
-                        if (Number.isFinite(id)) {
-                            beatmapsetIds.add(id);
+                        if (Number.isFinite(id) && !allBeatmapsetIds.has(id)) {
+                            allBeatmapsetIds.add(id);
+                            newThisDay++;
                         }
                     }
-
-                    console.log(chalk.cyan(`Day ${sinceDate}: Found ${beatmapsetIds.size} unique beatmapsets`));
-
-                    // Process each beatmapset
-                    for (const beatmapsetId of beatmapsetIds) {
-                        // Check if we already have this beatmapset
-                        const exists = await BeatmapsetRepository.beatmapsetExists(beatmapsetId);
-
-                        if (!exists) {
-                            console.log(chalk.yellow(`Found missing beatmapset: ${beatmapsetId}`));
-                            await this.fetchBeatmapsetFromOsu(beatmapsetId, true);
-                        }
-
-                        // Small delay to avoid rate limiting
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
+                    console.log(chalk.cyan(`Day ${sinceDate}: ${beatmaps.length} beatmaps, ${newThisDay} new unique beatmapsets (total: ${allBeatmapsetIds.size})`));
                 } catch (err) {
                     console.error(chalk.red(`Failed to scan beatmapsets for day ${sinceDate}:`), err instanceof Error ? err.message : err);
                 }
             }
 
-            console.log(chalk.green("Finished scanning recently ranked beatmapsets (last 14 days)"));
+            console.log(chalk.cyan(`Processing ${allBeatmapsetIds.size} unique beatmapsets...`));
+
+            // Process each unique beatmapset - always fetch to catch status changes (e.g. wip → ranked)
+            for (const beatmapsetId of allBeatmapsetIds) {
+                await this.fetchBeatmapsetFromOsu(beatmapsetId, true);
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            console.log(chalk.green(`Finished scanning recently ranked beatmapsets (last ${SCAN_DAYS} days)`));
         } catch (err) {
             console.error(chalk.red("Error in scanRecentlyRankedBeatmapsets:"), err instanceof Error ? err.message : err);
         }

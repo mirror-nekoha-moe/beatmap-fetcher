@@ -1,4 +1,5 @@
 import { Environment } from '@Bootstrap/Environment';
+import { BUILD_NUMBER, BUILD_DATE } from './BuildInfo';
 
 async function main(): Promise<void> {
     await Environment.initialize();
@@ -8,10 +9,10 @@ async function main(): Promise<void> {
     const { TaskRunner } = await import('@Task/TaskRunner');
 
     Logger.hookConsole();
-    console.log("[ beatmap-fetcher ]");
+    console.log(`[ beatmap-fetcher - BUILD.${BUILD_NUMBER} | ${BUILD_DATE} ]`);
     await SchemaUpdater.initialize();
     TaskRunner.run();
-    console.log("main() execution done.");   
+    console.log("main() execution done.");
 }
 
 main().catch((err) => {

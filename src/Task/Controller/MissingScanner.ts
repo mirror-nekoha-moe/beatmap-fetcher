@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import fs from 'fs';
+import fsp from 'fs/promises';
 import path from 'path';
 
 import { BeatmapsetRepository } from '@Domain/Beatmapset/Repository/BeatmapsetRepository';
@@ -8,7 +8,7 @@ import { BaseTask } from '@Task/BaseTask';
 export class MissingScanner {
     static async updateDbAfterDownload(beatmapsetId: number, filePath: string) {
         try {
-            const stats = fs.statSync(filePath);
+            const stats = await fsp.stat(filePath);
             await BeatmapsetRepository.markBeatmapsetDownloaded(beatmapsetId, true);
             // Fallback: update file_size using insertBeatmapset (if available)
             if (BeatmapsetRepository.updateDownloadState) {
@@ -20,38 +20,35 @@ export class MissingScanner {
         }
     }
 
-    private static fileExistsForBeatmapset(beatmapsetId: number): string | null {
-        const folderPath = path.resolve(String(process.env.STORAGE_DIR), String(beatmapsetId));
-        // console.log(chalk.blue(`Checking folder: ${folderPath}`));
-        if (!fs.existsSync(folderPath)) {
-            // console.log(chalk.yellow(`Folder does not exist: ${folderPath}`));
-            return null;
-        }
-        const files = fs.readdirSync(folderPath);
-        const fullPaths = files.map(f => path.join(folderPath, f));
-        // console.log(chalk.blue(`[DEBUG] Files in folder: ${JSON.stringify(fullPaths)}`));
-        const oszFiles = fullPaths.filter(f => f.endsWith('.osz'));
-        if (oszFiles.length === 0) {
-            // console.log(chalk.yellow(`No .osz files found in: ${folderPath}`));
-            return null;
-        }
-        return oszFiles[0];
-    }
-
     static async scanMissingMaps() {
         console.log(chalk.cyan("Scanning Missing Maps..."));
         const missing = await BeatmapsetRepository.getMissingBeatmapsets();
         console.log(chalk.cyan(`Found ${missing.length} missing beatmapsets`));
-            let fixed = 0;
-            for (const beatmapset of missing) {
-                const filePath = this.fileExistsForBeatmapset(beatmapset.id);
-                if (filePath) {
-                    await this.updateDbAfterDownload(beatmapset.id, filePath);
-                    fixed++;
-                } else {
-                    // console.log(chalk.gray(`No file found for beatmapset ${beatmapset.id}`));
-                }
-            }
+
+        // Read the entire storage root once instead of checking each folder individually.
+        // This avoids 1M+ individual stat/readdir calls on network mounts.
+        const storageDir = path.resolve(String(process.env.STORAGE_DIR));
+        const existingFolders = new Set(
+            await fsp.readdir(storageDir).catch(() => [] as string[])
+        );
+        console.log(chalk.cyan(`Storage root has ${existingFolders.size} folders on disk`));
+
+        let fixed = 0;
+        for (const beatmapset of missing) {
+            const idStr = String(beatmapset.id);
+            if (!existingFolders.has(idStr)) continue;
+
+            // Folder exists - check for .osz file
+            const folderPath = path.join(storageDir, idStr);
+            const files = await fsp.readdir(folderPath).catch(() => null);
+            if (!files) continue;
+            const oszFile = files.find(f => f.endsWith('.osz'));
+            if (!oszFile) continue;
+
+            const filePath = path.join(folderPath, oszFile);
+            await this.updateDbAfterDownload(beatmapset.id, filePath);
+            fixed++;
+        }
         console.log(chalk.green(`Done rechecking missing maps. Fixed ${fixed} beatmapsets.`));
     }
 

@@ -21,6 +21,9 @@ RUN npm ci && npm cache clean --force
 # Copy source code
 COPY src ./src
 
+# Copy build helper (generates BuildInfo.ts)
+COPY prebuild.js ./
+
 # Remove the cookies symlink if it exists (will be mounted as volume)
 RUN rm -rf /app/src/cookies && mkdir -p /app/src/cookies
 

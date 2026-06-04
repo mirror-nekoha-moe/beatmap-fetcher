@@ -94,6 +94,7 @@ export class Environment {
         COOKIE_FILE: String,
         DEBUG_LOGGING: Boolean,
         TRACK_ALL_MAPS: Boolean,
+        GRAVEYARD_DAILY_LIMIT: String,
 
         MIRROR_LOG_WEBHOOK: String,
         MIRROR_LOG_MAPSET: String,

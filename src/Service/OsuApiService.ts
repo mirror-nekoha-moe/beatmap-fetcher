@@ -1,11 +1,13 @@
 import chalk from 'chalk';
 import * as osu from 'osu-api-v2-js';
 import { Environment } from '@Bootstrap/Environment';
+import { ApiCallLogService } from '@Service/ApiCallLogService';
 
 export class OsuApiService {
 
     static v1 = class {
         public static async getBeatmaps(sinceDate: string): Promise<any>{
+            ApiCallLogService.logV1();
             const url = `https://osu.ppy.sh/api/get_beatmaps?k=${Environment.env.OSU_API_V1_KEY}&since=${encodeURIComponent(sinceDate)}&limit=500`;
             const response = await fetch(url);
 
@@ -26,10 +28,23 @@ export class OsuApiService {
         public static async authenticate(): Promise<void> {
             try {
                 console.log(chalk.cyan("Authenticating with osu! API..."));
-                this.osuApiInstance = await osu.API.createAsync(
+                const api = await osu.API.createAsync(
                     parseInt(Environment.env.OSU_API_CLIENT_ID!, 10),
                     Environment.env.OSU_API_CLIENT_SECRET!
                 );
+                // Wrap with a Proxy so every method call is counted
+                this.osuApiInstance = new Proxy(api, {
+                    get(target, prop) {
+                        const value = (target as any)[prop];
+                        if (typeof value === 'function') {
+                            return function (...args: any[]) {
+                                ApiCallLogService.logV2();
+                                return value.apply(target, args);
+                            };
+                        }
+                        return value;
+                    }
+                });
                 console.log(chalk.green("osu! API authenticated successfully"));
             } catch (err) {
                 console.error(chalk.red("Failed to authenticate osu! API:"), err instanceof Error ? err.message : err);

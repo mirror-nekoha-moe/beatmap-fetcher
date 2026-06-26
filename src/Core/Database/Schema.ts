@@ -192,5 +192,23 @@ export class Schema {
             );
             ALTER TABLE public.${Environment.env.TABLE_STATS} OWNER TO ${Environment.env.PG_USERNAME};
         `,
+
+        api_calls_v1: `
+            CREATE TABLE IF NOT EXISTS public.${Environment.env.TABLE_API_CALLS_V1} (
+                "minute" TIMESTAMPTZ NOT NULL,
+                "calls" INTEGER NOT NULL DEFAULT 0,
+                CONSTRAINT ${Environment.env.TABLE_API_CALLS_V1}_pkey PRIMARY KEY ("minute")
+            );
+            ALTER TABLE public.${Environment.env.TABLE_API_CALLS_V1} OWNER TO ${Environment.env.PG_USERNAME};
+        `,
+
+        api_calls_v2: `
+            CREATE TABLE IF NOT EXISTS public.${Environment.env.TABLE_API_CALLS_V2} (
+                "minute" TIMESTAMPTZ NOT NULL,
+                "calls" INTEGER NOT NULL DEFAULT 0,
+                CONSTRAINT ${Environment.env.TABLE_API_CALLS_V2}_pkey PRIMARY KEY ("minute")
+            );
+            ALTER TABLE public.${Environment.env.TABLE_API_CALLS_V2} OWNER TO ${Environment.env.PG_USERNAME};
+        `,
     };
 }

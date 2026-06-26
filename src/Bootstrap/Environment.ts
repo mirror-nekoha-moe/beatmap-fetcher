@@ -36,6 +36,8 @@ export class Environment {
             'TABLE_BEATMAPSET',
             'TABLE_BEATMAP',
             'TABLE_STATS',
+            'TABLE_API_CALLS_V1',
+            'TABLE_API_CALLS_V2',
 
             // Settings
             'STORAGE_DIR',
@@ -89,6 +91,8 @@ export class Environment {
         TABLE_BEATMAPSET: String,
         TABLE_BEATMAP: String,
         TABLE_STATS: String,
+        TABLE_API_CALLS_V1: String,
+        TABLE_API_CALLS_V2: String,
 
         STORAGE_DIR: String,
         COOKIE_FILE: String,

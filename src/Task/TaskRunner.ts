@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { ApiCallLogService } from '@Service/ApiCallLogService';
 import { BeatmapsetFetcher } from '@Task/Controller/BeatmapsetFetcher';
 import { BeatmapsetUpdater } from '@Task/Controller/BeatmapsetUpdater';
 import { CookieReader } from '@Task/Controller/CookieReader';
@@ -17,6 +18,7 @@ export class TaskRunner {
     
     static async run(): Promise<void> {
         try {
+            ApiCallLogService.start();
             OsuAuthenticator.run(120, 1);
             CookieReader.run(60, 1);
 

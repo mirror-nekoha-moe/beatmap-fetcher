@@ -19,7 +19,7 @@ async function main() {
         const jsonString = JSON.stringify(events, null, 2);
 
         fs.writeFileSync('beatmapsetEvents.json', jsonString);
-        console.log(`Saved ${events.length} events to beatmapsetEvents.json`);
+        console.log(`Saved events to beatmapsetEvents.json`);
     } catch (err) {
         console.error("Error while testing osu! API v2:", err instanceof Error ? err.message : err);
         process.exit(1);

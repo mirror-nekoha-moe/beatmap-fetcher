@@ -9,3 +9,5 @@
 beatmapsetEvents.json
 src/BuildInfo.ts
 .build-number
+src/Test/test.sh
+src/Test/test.ts

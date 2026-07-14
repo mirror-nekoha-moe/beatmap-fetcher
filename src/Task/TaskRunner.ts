@@ -7,6 +7,7 @@ import { GraveyardDownloader } from '@Task/Controller/GraveyardDownloader';
 import { MissingScanner } from '@Task/Controller/MissingScanner';
 import { OsuAuthenticator } from '@Task/Controller/OsuAuthenticator';
 import { QualifiedUpdater } from '@Task/Controller/QualifiedUpdater';
+import { RankNotifier } from '@Task/Controller/RankNotifier';
 import { RecentScanner } from '@Task/Controller/RecentScanner';
 import { StatsUpdater } from '@Task/Controller/StatsUpdater';
 import { TaskQueueWorker } from '@Task/Controller/TaskQueueWorker';
@@ -34,7 +35,12 @@ export class TaskRunner {
 
             BeatmapsetUpdater.run(1, 30);
             BeatmapsetFetcher.run(1, 10);
-            RecentScanner.run(1440, 10);
+
+            // Replaced by RankNotifier Task
+            // RecentScanner.run(1440, 10);
+
+            // Notify Discord on rank/love events and downloads those maps
+            RankNotifier.run(1, 2);
 
             // Check qualified maps once per day — updates them to ranked/loved if they passed
             QualifiedUpdater.run(1440, 10);

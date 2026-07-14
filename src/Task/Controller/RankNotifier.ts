@@ -98,7 +98,7 @@ export class RankNotifier {
         const mirrorBase = (Environment.env.MIRROR_BASE_URL ?? '').replace(/\/$/, '');
 
         const mirrorLinks = mirrorBase
-            ? `[Download](${mirrorBase}/api/download/${id}) • [No Video](${mirrorBase}/api/download/${id}?noVideo=1) • [osu!direct](osu://s/${id}) • [Mirror Page](${mirrorBase}/beatmapsets/${id})`
+            ? `[Download](${mirrorBase}/api/download/${id}) • [No Video](${mirrorBase}/api/download/${id}?noVideo=1) • [Mirror Page](${mirrorBase}/beatmapsets/${id})`
             : `[osu!direct](osu://s/${id})`;
 
         const embed: Record<string, any> = {

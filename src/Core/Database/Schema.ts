@@ -188,7 +188,9 @@ export class Schema {
                 size_graveyard bigint NULL DEFAULT 0,
                 size_wip bigint NULL DEFAULT 0,
                 size_qualified bigint NULL DEFAULT 0,
-                size_pending bigint NULL DEFAULT 0
+                size_pending bigint NULL DEFAULT 0,
+
+                last_event_id bigint NULL DEFAULT 0
             );
             ALTER TABLE public.${Environment.env.TABLE_STATS} OWNER TO ${Environment.env.PG_USERNAME};
         `,

@@ -243,4 +243,23 @@ export class StatsRepository {
             [cursor]
         );
     }
+
+    static async getEventCursor(): Promise<number> {
+        await pool.query(
+            `INSERT INTO public.${Environment.env.TABLE_STATS} (last_event_id)
+             SELECT 0
+             WHERE NOT EXISTS (SELECT 1 FROM public.${Environment.env.TABLE_STATS})`
+        );
+        const res = await pool.query(
+            `SELECT last_event_id FROM public.${Environment.env.TABLE_STATS} LIMIT 1`
+        );
+        return res.rows[0]?.last_event_id ?? 0;
+    }
+
+    static async updateEventCursor(eventId: number): Promise<void> {
+        await pool.query(
+            `UPDATE public.${Environment.env.TABLE_STATS} SET last_event_id = $1`,
+            [eventId]
+        );
+    }
 }

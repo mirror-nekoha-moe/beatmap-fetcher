@@ -102,6 +102,9 @@ export class Environment {
 
         MIRROR_LOG_WEBHOOK: String,
         MIRROR_LOG_MAPSET: String,
+        MIRROR_LOG_STATUS: String,
+        MIRROR_LOG_DOWNLOAD: String,
+        MIRROR_BASE_URL: String,
     };
 }
 

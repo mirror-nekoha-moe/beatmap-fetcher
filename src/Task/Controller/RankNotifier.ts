@@ -98,12 +98,12 @@ export class RankNotifier {
         const mirrorBase = (Environment.env.MIRROR_BASE_URL ?? '').replace(/\/$/, '');
 
         const mirrorLinks = mirrorBase
-            ? `[Download](${mirrorBase}/api/download/${id}) • [No Video](${mirrorBase}/api/download/${id}?noVideo=1) • [Mirror Page](${mirrorBase}/beatmapsets/${id})`
+            ? `[Download](${mirrorBase}/api/download/${id}) • [No Video](${mirrorBase}/api/download/${id}?noVideo=1) • [Mirror Page](${mirrorBase}/beatmapset/${id})`
             : `[osu!direct](osu://s/${id})`;
 
         const embed: Record<string, any> = {
             title: `Downloaded: ${artist} - ${title}`,
-            url: mirrorBase ? `${mirrorBase}/beatmapsets/${id}` : `https://osu.ppy.sh/beatmapsets/${id}`,
+            url: mirrorBase ? `${mirrorBase}/beatmapset/${id}` : `https://osu.ppy.sh/beatmapsets/${id}`,
             color: EMBED_COLOR[type] ?? 0xffffff,
             fields: [
                 {

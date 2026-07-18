@@ -288,4 +288,10 @@ export class BeatmapsetRepository {
             [value, id]
         );
     }
-}
+
+    static async markDownloadDisabled(id: bigint): Promise<void> {
+        await pool.query(
+            `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET download_disabled = true WHERE id = $1`,
+            [id]
+    );
+}}

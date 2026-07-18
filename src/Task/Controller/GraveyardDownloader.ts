@@ -114,14 +114,21 @@ export class GraveyardDownloader {
                             }
                         }
                     }
-
                     if (!success) {
-                        failed++;
                         const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
-                        console.warn(chalk.yellow(
-                            `GraveyardDownloader: [${totalSeen}/${this.DAILY_LIMIT}] Failed to download beatmapset ${beatmapsetId} after 3 attempts\n` +
-                            `Error: ${msg}`
-                        ));
+
+                        if (msg.includes('Zip validation failed') || msg.includes('no EOCD signature')) {
+                            console.log(chalk.gray(`GraveyardDownloader: Beatmapset ${beatmapsetId} failed zip validation after 3 attempts, marking disabled`));
+                            await BeatmapsetRepository.markDownloadDisabled(BigInt(beatmapsetId));
+                            skippedDisabled++;
+                            madeProgressThisBatch = true;
+                        } else {
+                            failed++;
+                            console.warn(chalk.yellow(
+                                `GraveyardDownloader: [${totalSeen}/${this.DAILY_LIMIT}] Failed to download beatmapset ${beatmapsetId} after 3 attempts\n` +
+                                `Error: ${msg}`
+                            ));
+                        }
                     }
                 } catch (err) {
                     failed++;

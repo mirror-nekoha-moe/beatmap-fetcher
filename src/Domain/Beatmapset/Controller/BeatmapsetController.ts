@@ -190,6 +190,7 @@ export class BeatmapsetController {
 
             download_disabled: rawBeatmapset.availability.download_disabled ?? null,
             more_information: rawBeatmapset.availability.more_information ?? null,
+            playcount: rawBeatmapset.play_count ?? null,
 
             beatmap_count:  rawBeatmapset.beatmaps?.length ?? 0,
 

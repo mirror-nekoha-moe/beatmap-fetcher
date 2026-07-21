@@ -56,6 +56,7 @@ export class Schema {
                 "id" BIGINT NOT NULL PRIMARY KEY,
                 "is_scoreable" BOOLEAN NULL DEFAULT NULL,
                 "last_updated" TIMESTAMPTZ NULL DEFAULT NULL,
+                "lazer_only" BOOLEAN NULL DEFAULT NULL,
                 "max_combo" BIGINT NULL DEFAULT NULL,
                 "mode" TEXT NULL DEFAULT NULL,
                 "mode_int" SMALLINT NULL DEFAULT NULL,

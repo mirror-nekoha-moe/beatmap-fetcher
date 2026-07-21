@@ -25,6 +25,7 @@ export class BeatmapRepository {
                 id,
                 is_scoreable,
                 last_updated,
+                lazer_only,
                 max_combo,
                 mode,
                 mode_int,
@@ -41,7 +42,7 @@ export class BeatmapRepository {
                 $11,$12,$13,$14,$15,
                 $16,$17,$18,$19,$20,
                 $21,$22,$23,$24,$25,
-                $26,$27
+                $26,$27,$28
             )
             ON CONFLICT (id) DO UPDATE SET
                 accuracy = EXCLUDED.accuracy,
@@ -60,6 +61,7 @@ export class BeatmapRepository {
                 hit_length = EXCLUDED.hit_length,
                 is_scoreable = EXCLUDED.is_scoreable,
                 last_updated = EXCLUDED.last_updated,
+                lazer_only = EXCLUDED.lazer_only,
                 max_combo = EXCLUDED.max_combo,
                 mode = EXCLUDED.mode,
                 mode_int = EXCLUDED.mode_int,
@@ -88,6 +90,7 @@ export class BeatmapRepository {
             beatmap.id,
             beatmap.is_scoreable,
             beatmap.last_updated,
+            beatmap.lazer_only,
             beatmap.max_combo,
             beatmap.mode,
             beatmap.mode_int,

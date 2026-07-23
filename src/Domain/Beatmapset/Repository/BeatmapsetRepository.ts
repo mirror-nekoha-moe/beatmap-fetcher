@@ -257,16 +257,17 @@ export class BeatmapsetRepository {
         return res.rows;
     }
 
-    static async getUndownloadedByStatuses(statuses: string[], limit: number): Promise<{ id: number }[]> {
-        const placeholders = statuses.map((_, i) => `$${i + 1}`).join(', ');
+    static async getUndownloadedGraveyard(statuses: string[], limit: number): Promise<{ id: number }[]> {
         const res = await pool.query(
-            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET}
-             WHERE downloaded = false
-               AND download_disabled = false
-               AND status IN (${placeholders})
-             ORDER BY id ASC
-             LIMIT $${statuses.length + 1}`,
-            [...statuses, limit]
+            `
+                SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET}
+                    WHERE downloaded = false
+                        AND download_disabled = false
+                        AND status = ANY($1)
+                    ORDER BY id ASC
+                    LIMIT $2
+            `,
+            [statuses, limit]
         );
         return res.rows;
     }

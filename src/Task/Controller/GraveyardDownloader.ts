@@ -9,22 +9,12 @@ import { BaseTask } from '@Task/BaseTask';
 
 const basePath = path.resolve(__dirname, Environment.env.STORAGE_DIR!);
 
-/**
- * GraveyardDownloader
- * 
- * Slowly downloads graveyard, pending, and wip beatmapsets that are
- * tracked in the database but not yet downloaded.
- * 
- * Runs once per day and downloads up to GRAVEYARD_DAILY_LIMIT maps (default 400).
- * Skips qualified maps (they will become ranked or get removed anyway).
- */
+// GraveyardDownloader
+// (Skips qualified maps)
 export class GraveyardDownloader {
     private static readonly DAILY_LIMIT = Number(Environment.env.GRAVEYARD_DAILY_LIMIT) || 400;
 
-    // Delay between downloads in ms - spread 400 downloads over ~24h
-    // 24h = 86400s => 86400 / 400 = 216s per download (~3.6 min)
-    // We use a shorter delay and just cap at the daily limit so the task finishes faster and sleeps until next run
-    private static readonly DOWNLOAD_DELAY_MS = 5000; // 5 seconds between downloads
+    private static readonly DOWNLOAD_DELAY_MS = 5000;
 
     static async downloadGraveyardMaps(): Promise<void> {
         const statuses = ['graveyard', 'pending', 'wip'];
@@ -36,7 +26,7 @@ export class GraveyardDownloader {
 
         while (downloaded < this.DAILY_LIMIT) {
             const remaining = this.DAILY_LIMIT - downloaded;
-            const rows = await BeatmapsetRepository.getUndownloadedByStatuses(statuses, remaining);
+            const rows = await BeatmapsetRepository.getUndownloadedGraveyard(statuses, remaining);
 
             if (rows.length === 0) {
                 if (totalSeen === 0) {
@@ -138,7 +128,6 @@ export class GraveyardDownloader {
                     ));
                 }
 
-                // Delay between downloads to avoid rate limiting
                 await new Promise(resolve => setTimeout(resolve, this.DOWNLOAD_DELAY_MS));
             }
 
@@ -148,8 +137,7 @@ export class GraveyardDownloader {
             }
         }
 
-            console.log(chalk.green(`GraveyardDownloader: Finished. Downloaded: ${downloaded}, Failed: ${failed}, Disabled-skipped: ${skippedDisabled}, Total processed: ${totalSeen}`
-        ));
+        console.log(chalk.green(`GraveyardDownloader: Finished. Downloaded: ${downloaded}, Failed: ${failed}, Disabled-skipped: ${skippedDisabled}, Total processed: ${totalSeen}`));
     }
     /**
      * Run once per day (1440 minutes), with 30 minute error retry delay.

@@ -87,27 +87,29 @@ export class DownloadService {
 
         // Fetch types are implicitly included in recent Node versions but let's add a type check
         const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to download: " + response.statusText);
+        if (!response.ok) {
+            throw new Error("Failed to download: " + response.statusText);
+        }
 
         // Get filename from Content-Disposition header
-        const cd = response.headers.get("content-disposition");
-        if (!cd) throw new Error("Server did not provide a filename");
+        // const cd = response.headers.get("content-disposition");
+        // if (!cd) throw new Error("Server did not provide a filename");
 
-        const match = cd.match(/filename\*=UTF-8''(.+)|filename="(.+)"/);
-        if (!match) throw new Error("Could not extract filename from headers");
+        // const match = cd.match(/filename\*=UTF-8''(.+)|filename="(.+)"/);
+        // if (!match) throw new Error("Could not extract filename from headers");
 
-        let filename: string;
-        try {
-            filename = decodeURIComponent(match[1] || match[2]);
-        } catch {
-            // Filename contains invalid percent-encoded sequences - use raw value
-            filename = match[1] || match[2];
-        }
+        let filename: string = `${beatmapsetId}.osz`;
+        // try {
+        //     filename = decodeURIComponent(match[1] || match[2]);
+        // } catch {
+        //     // Filename contains invalid percent-encoded sequences - use raw value
+        //     filename = match[1] || match[2];
+        // }
         
         // Sanitize filename: replace invalid filesystem characters
         // Replace characters that are illegal in SMB/CIFS filenames
         // / -> ⧸ (U+29F8), \ -> ⧹ (U+29F9), : -> ː (U+02D0)
-        filename = filename.replace(/\//g, '⧸').replace(/\\/g, '⧹').replace(/:/g, 'ː');
+        // filename = filename.replace(/\//g, '⧸').replace(/\\/g, '⧹').replace(/:/g, 'ː');
         
         const filePath = path.join(folderPath, filename);
 
@@ -118,7 +120,10 @@ export class DownloadService {
             await pipeline(readableStream, fileStream);
         } catch (err) {
             // Clean up partial file on stream failure
-            try { fs.unlinkSync(filePath); } catch {}
+            try { 
+                fs.unlinkSync(filePath);
+            } 
+            catch {}
             throw err;
         }
 
@@ -137,17 +142,21 @@ export class DownloadService {
         return { filePath, fileSize };
     }
 
-    /**
-     * Validates that the file is a complete zip archive by checking for the
-     * end-of-central-directory (EOCD) signature in the last 64KB of the file.
-     * Throws if the signature is not found (truncated/corrupt download).
-     */
+    
+    // Validates that the file is a complete zip archive by checking for the
+    // end-of-central-directory (EOCD) signature in the last 64KB of the file.
+    // Throws if the signature is not found (truncated/corrupt download).
+    
     private static async validateZip(filePath: string): Promise<void> {
         const EOCD_SIG = Buffer.from([0x50, 0x4B, 0x05, 0x06]); // PK\x05\x06
-        const CHECK_TAIL = 65536; // EOCD can be up to 64KB from end due to zip comment
+        
+        // EOCD can be up to 64KB from end due to zip comment
+        const CHECK_TAIL = 65536;
 
         const stat = await fsp.stat(filePath);
-        if (stat.size < 22) throw new Error(`File too small to be a valid zip: ${filePath}`);
+        if (stat.size < 22) {
+            throw new Error(`File too small to be a valid zip: ${filePath}`);
+        }
 
         const readSize = Math.min(CHECK_TAIL, stat.size);
         const buf = Buffer.alloc(readSize);
@@ -158,24 +167,25 @@ export class DownloadService {
             await fd.close();
         }
 
-        // Search backwards for EOCD signature
+        // Search backwards for EOCD signature, returns if EOCD found
         for (let i = buf.length - 22; i >= 0; i--) {
             if (buf[i] === EOCD_SIG[0] && buf[i+1] === EOCD_SIG[1] &&
                 buf[i+2] === EOCD_SIG[2] && buf[i+3] === EOCD_SIG[3]) {
-                return; // valid
+                return;
             }
         }
 
         // Not found - delete corrupt file and throw so retry kicks in
-        try { fs.unlinkSync(filePath); } catch {}
-        throw new Error(`Zip validation failed (no EOCD signature): ${path.basename(filePath)} — file deleted for re-download`);
+        try {
+            fs.unlinkSync(filePath);
+        } catch {}
+        throw new Error(`Zip validation failed (no EOCD signature): ${path.basename(filePath)} deleted for re-download`);
     }
 
-    /**
-     * If the file is prefixed with a multipart form-data header (i.e. does not start
-     * with the ZIP magic bytes PK\x03\x04), find the real ZIP start and truncate the file
-     * in-place by rewriting it without the prefix.
-     */
+    // If the file is prefixed with a multipart form-data header (i.e. does not start
+    // with the ZIP magic bytes PK\x03\x04), find the real ZIP start and truncate the file
+    // in-place by rewriting it without the prefix.
+    
     private static async stripMultipartPrefix(filePath: string): Promise<void> {
         const ZIP_MAGIC = Buffer.from([0x50, 0x4B, 0x03, 0x04]); // PK\x03\x04
         const PEEK = 4096; // enough to find the boundary + headers

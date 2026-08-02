@@ -264,7 +264,7 @@ export class BeatmapsetRepository {
                     WHERE downloaded = false
                         AND download_disabled = false
                         AND status = ANY($1)
-                    ORDER BY id ASC
+                    ORDER BY play_count DESC NULLS LAST
                     LIMIT $2
             `,
             [statuses, limit]

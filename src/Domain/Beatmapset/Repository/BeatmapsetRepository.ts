@@ -242,7 +242,7 @@ export class BeatmapsetRepository {
         const res = await pool.query(
             `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET} WHERE downloaded = false ORDER BY id ASC`
         );
-        return res.rows;
+        return res.rows.map(r => ({ id: Number(r.id) }));
     }
 
     static async getMissingByStatuses(statuses: string[]): Promise<{ id: number }[]> {
@@ -254,7 +254,7 @@ export class BeatmapsetRepository {
              ORDER BY id ASC`,
             statuses
         );
-        return res.rows;
+        return res.rows.map(r => ({ id: Number(r.id) }));
     }
 
     static async getUndownloadedGraveyard(statuses: string[], limit: number): Promise<{ id: number }[]> {
@@ -269,7 +269,7 @@ export class BeatmapsetRepository {
             `,
             [statuses, limit]
         );
-        return res.rows;
+        return res.rows.map(r => ({ id: Number(r.id) }));
     }
 
     static async getMissingMetadata(): Promise<{ id: number }[]> {

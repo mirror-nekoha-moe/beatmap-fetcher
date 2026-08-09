@@ -67,8 +67,7 @@ export class BeatmapsetController {
                 try {
                     return await osuApiInstance.getBeatmapset(id);
                 } catch (err: any) {
-                    // Handle 404s silently
-                    if (err?.status_code === 404 || (err instanceof Error && err.message.includes('Not Found'))) {
+                    if (err?.status_code === 404 || err?.message === 'Not Found' || (err instanceof Error && err.message.includes('Not Found'))) {
                         return null;
                     }
                     // Handle rate limits
@@ -108,8 +107,11 @@ export class BeatmapsetController {
             }
 
             return await this.processBeatmapset(rawBeatmapset, allowDownload, forceRedownload);
-        } catch (err) {
-            console.error(chalk.red(`Failed to fetch beatmapset ${id}:`), err instanceof Error ? err.message : err);
+        } catch (err: any) {
+            const details = err instanceof Error
+                ? err.message
+                : `status_code: ${err?.status_code ?? '?'} | message: ${err?.message ?? '?'} | endpoint: ${Array.isArray(err?.endpoint) ? err.endpoint.join('/') : err?.endpoint ?? '?'}`;
+            console.error(chalk.red(`Failed to fetch beatmapset ${id}:`), details);
             return null;
         }
     }

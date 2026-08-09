@@ -292,7 +292,7 @@ export class BeatmapsetController {
                 try {
                     // Fetch beatmapsets with low concurrency so BeatmapsetFetcher and RecentScanner
                     // are not starved. 3 req/sec = 180 req/min, leaves ~1000 req/min for other tasks.
-                    const concurrencyLimit = 3; // 3 requests at a time
+                    const concurrencyLimit = 2; // 3 requests at a time
                     const beatmapsets = [];
                     
                     // Process in chunks optimized for rate limit
@@ -309,8 +309,7 @@ export class BeatmapsetController {
                         const results = await Promise.all(promises);
                         beatmapsets.push(...results);
                         
-                        // Delay between chunks: 10 requests per second = 600 requests/min (50% of 1200/min limit)
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        await new Promise(resolve => setTimeout(resolve, 3000));
                     }
                     
                     // Create a map of successfully retrieved beatmapsets

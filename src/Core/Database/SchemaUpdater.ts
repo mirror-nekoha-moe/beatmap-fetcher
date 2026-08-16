@@ -75,6 +75,13 @@ export class SchemaUpdater {
         }
     }
 
+    static async ensureIndexes(client: PoolClient): Promise<void> {
+        for (const sql of Schema.Indexes) {
+            console.log(`Ensuring index: ${sql.trim().split('\n')[0]}`);
+            await client.query(sql);
+        }
+    }
+
     static async initialize(): Promise<void> {
 		const pool = new Pool({
 			host: Environment.env.PG_HOSTNAME,
@@ -129,6 +136,7 @@ export class SchemaUpdater {
 			await this.ensurePrimaryKeys(client);
 			await this.ensureForeignKeys(client);
 			await this.ensureStatsRow(client);
+			await this.ensureIndexes(client);
 			console.log('Database schema is fully up to date!');
 		} catch (err) {
 			console.error('Schema update failed:', err instanceof Error ? err.message : err);

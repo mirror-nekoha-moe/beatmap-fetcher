@@ -36,6 +36,17 @@ export class Schema {
         },
     ];
 
+    static Indexes: string[] = [
+        `CREATE INDEX IF NOT EXISTS idx_${Environment.env.TABLE_BEATMAP}_beatmapset_id ON public.${Environment.env.TABLE_BEATMAP} (beatmapset_id);`,
+
+        `CREATE EXTENSION IF NOT EXISTS pg_trgm;`,
+        `CREATE INDEX IF NOT EXISTS idx_${Environment.env.TABLE_BEATMAPSET}_title_trgm ON public.${Environment.env.TABLE_BEATMAPSET} USING gin (title gin_trgm_ops);`,
+        `CREATE INDEX IF NOT EXISTS idx_${Environment.env.TABLE_BEATMAPSET}_artist_trgm ON public.${Environment.env.TABLE_BEATMAPSET} USING gin (artist gin_trgm_ops);`,
+        `CREATE INDEX IF NOT EXISTS idx_${Environment.env.TABLE_BEATMAPSET}_creator_trgm ON public.${Environment.env.TABLE_BEATMAPSET} USING gin (creator gin_trgm_ops);`,
+
+        `CREATE INDEX IF NOT EXISTS idx_${Environment.env.TABLE_BEATMAPSET}_downloaded ON public.${Environment.env.TABLE_BEATMAPSET} (downloaded) WHERE downloaded = true;`,
+    ];
+
     static Tables = {
         beatmap: `
             CREATE TABLE IF NOT EXISTS public.${Environment.env.TABLE_BEATMAP} (

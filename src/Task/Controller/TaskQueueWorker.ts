@@ -6,7 +6,9 @@ import { TaskQueueHandler } from '@Domain/TaskQueue/Controller/TaskQueueHandler'
 export class TaskQueueWorker {
     static async poll(): Promise<void> {
         const job = await TaskQueueRepository.claimNext();
-        if (!job) return; // nothing pending
+        // nothing pending
+        if (!job)
+            return;
 
         console.log(chalk.cyan(`[TaskQueue] Starting job #${job.id}: ${job.task}`), job.params);
         try {
@@ -18,13 +20,10 @@ export class TaskQueueWorker {
             await TaskQueueRepository.markFailed(job.id, msg);
             console.error(chalk.red(`[TaskQueue] Job #${job.id} (${job.task}) failed: ${msg}`));
         }
-
-        // Cleanup old jobs periodically (piggyback on poll)
         await TaskQueueRepository.cleanup().catch(() => {});
     }
 
     static async run(pollIntervalSeconds: number = 10): Promise<void> {
-        // Ensure table exists on startup
         await TaskQueueRepository.ensureTable();
         console.log(chalk.cyan(`[TaskQueue] Worker started, polling every ${pollIntervalSeconds}s`));
 

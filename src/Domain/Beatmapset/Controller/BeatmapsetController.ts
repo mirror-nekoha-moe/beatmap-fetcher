@@ -29,7 +29,7 @@ export class BeatmapsetController {
                 // Add delay between requests (500ms)
                 if (id > currentHighestId + 1) {
                     // !!!!! MOVE TO ENV
-                    await new Promise(resolve => setTimeout(resolve, 250));
+                    await new Promise(resolve => setTimeout(resolve, 750));
                 }
 
                 const beatmapset = await this.fetchBeatmapsetFromOsu(id, false);
@@ -286,18 +286,16 @@ export class BeatmapsetController {
             const ids = await BeatmapsetRepository.getBeatmapsetsNeedingRefresh();
 
             console.log(chalk.cyan(`Refreshing ${ids.length} beatmapsets from osu! API (filtered)...`));
-            
+
             // Process in batches of 50 (osu! API's maximum batch size)
             for (let i = 0; i < ids.length; i += 50) {
                 const batchIds = ids.slice(i, i + 50);
                 
                 try {
-                    // Fetch beatmapsets with low concurrency so BeatmapsetFetcher and RecentScanner
-                    // are not starved. 3 req/sec = 180 req/min, leaves ~1000 req/min for other tasks.
-                    const concurrencyLimit = 2; // 3 requests at a time
+                    const concurrencyLimit = 1;
                     const beatmapsets = [];
                     
-                    // Process in chunks optimized for rate limit
+                    // Process in chunks
                     for (let j = 0; j < batchIds.length; j += concurrencyLimit) {
                         const chunk = batchIds.slice(j, j + concurrencyLimit);
                         const promises = chunk.map(id => 

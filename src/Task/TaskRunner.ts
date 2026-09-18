@@ -29,11 +29,12 @@ export class TaskRunner {
             StatsUpdater.run(5, 1);
             await this.sleep(5000);
 
-            // MissingScanner disabled - processBeatmapset already self-heals downloaded state
-            // inline, and BeatmapsetUpdater's filtered query includes all downloaded=false maps.
+            // DEPRECATED
             // MissingScanner.run(10080, 60);
 
             BeatmapsetUpdater.run(1, 30);
+
+            // Crawler
             BeatmapsetFetcher.run(1, 10);
 
             // Replaced by RankNotifier Task
@@ -42,13 +43,13 @@ export class TaskRunner {
             // Notify Discord on rank/love events and downloads those maps
             RankNotifier.run(1, 2);
 
-            // Check qualified maps once per day — updates them to ranked/loved if they passed
+            // Check qualified maps once per day, updates them to ranked/loved if they passed
             QualifiedUpdater.run(1440, 10);
 
             // Download graveyard/pending/wip maps slowly (once per day, 400/day default)
             GraveyardDownloader.run(1440, 30);
 
-            // Task queue worker - polls DB every 10s for jobs enqueued externally (e.g. from Discord bot)
+            // Discord Bot command handler
             TaskQueueWorker.run(10);
         } catch (err) {
             console.error(chalk.red("TaskRunner encountered an error:"), err instanceof Error ? err.message : err);

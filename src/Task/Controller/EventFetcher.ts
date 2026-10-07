@@ -2,12 +2,14 @@ import chalk from 'chalk';
 
 import { BeatmapsetController } from '@Domain/Beatmapset/Controller/BeatmapsetController';
 import { StatsRepository } from '@Domain/Stats/Repository/StatsRepository';
+import { Environment } from '@Bootstrap/Environment';
 import { OsuApiService } from '@Service/OsuApiService';
 import { BaseTask } from '@Task/BaseTask';
 
 const BEATMAPSET_TYPES = new Set(['beatmapsetUpload', 'beatmapsetUpdate', 'beatmapsetRevive', 'beatmapsetDelete']);
 const PAGE_SIZE = 50;
 const MAX_FETCH_ATTEMPTS = 5;
+const UPLOAD_EMBED_COLOR = 0xffcc22;
 
 export class EventFetcher {
     private static failedAttempts = new Map<number, number>();
@@ -33,10 +35,11 @@ export class EventFetcher {
         return result.events[0]?.id ?? 0;
     }
 
-    private static async fetchBeatmapset(beatmapsetId: number): Promise<void> {
+    private static async fetchBeatmapset(beatmapsetId: number): Promise<any> {
         try {
-            await BeatmapsetController.fetchBeatmapsetFromOsu(beatmapsetId, false, false, true);
+            const beatmapset = await BeatmapsetController.fetchBeatmapsetFromOsu(beatmapsetId, false, false, true);
             this.failedAttempts.delete(beatmapsetId);
+            return beatmapset;
         } catch (err) {
             const previousAttempts = this.failedAttempts.get(beatmapsetId) ?? 0;
             const attempts = previousAttempts + 1;
@@ -45,12 +48,72 @@ export class EventFetcher {
             if (attempts >= MAX_FETCH_ATTEMPTS) {
                 console.error(chalk.red(`EventFetcher: giving up on beatmapset ${beatmapsetId} after ${attempts} attempts`));
                 this.failedAttempts.delete(beatmapsetId);
-                return;
+                return null;
             }
 
             this.failedAttempts.set(beatmapsetId, attempts);
             throw err;
         }
+    }
+
+    // beatmapset is null if TRACK_ALL_MAPS is off, use event data then
+    private static async sendUploadEmbed(event: any, beatmapsetId: number, beatmapset: any): Promise<void> {
+        const webhookUrl = Environment.env.MIRROR_LOG_UPLOAD;
+        if (!webhookUrl) return;
+
+        let title = event.beatmapset.title;
+        let mapper = event.user?.username ?? '/';
+        let mapperUrl = `https://osu.ppy.sh${event.user?.url ?? ''}`;
+        let status = '/';
+        let cover = null;
+
+        if (beatmapset) {
+            const artist = beatmapset.artist_unicode || beatmapset.artist;
+            const songTitle = beatmapset.title_unicode || beatmapset.title;
+            title = `${artist} - ${songTitle}`;
+            mapper = beatmapset.creator ?? mapper;
+            mapperUrl = `https://osu.ppy.sh/users/${beatmapset.user_id}`;
+            status = beatmapset.status;
+            cover = beatmapset.covers?.['cover@2x'] ?? beatmapset.covers?.cover ?? null;
+        }
+
+        const embed: Record<string, any> = {
+            title: `New Upload: ${title}`,
+            url: `https://osu.ppy.sh/beatmapsets/${beatmapsetId}`,
+            color: UPLOAD_EMBED_COLOR,
+            fields: [
+                {
+                    name: 'Mapper',
+                    value: `[${mapper}](${mapperUrl})`,
+                    inline: true
+                },
+                {
+                    name: 'Status',
+                    value: status,
+                    inline: true
+                },
+            ],
+            footer: {
+                text: `ID: ${beatmapsetId}`
+            },
+            timestamp: event.created_at,
+        };
+
+        if (cover) {
+            embed.image = {
+                url: cover
+            };
+        }
+
+        await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                embeds: [embed]
+            }),
+        });
     }
 
     private static async processEvents(maxPages: number): Promise<void> {
@@ -66,6 +129,7 @@ export class EventFetcher {
         }
 
         const beatmapsetIds = new Set<number>();
+        const uploadEvents = new Map<number, any>();
         let firstUploadId = 0;
         let eventCount = 0;
         let page = 0;
@@ -96,8 +160,11 @@ export class EventFetcher {
                 }
                 beatmapsetIds.add(beatmapsetId);
 
-                if (event.type === 'beatmapsetUpload' && firstUploadId === 0) {
-                    firstUploadId = beatmapsetId;
+                if (event.type === 'beatmapsetUpload') {
+                    uploadEvents.set(beatmapsetId, event);
+                    if (firstUploadId === 0) {
+                        firstUploadId = beatmapsetId;
+                    }
                 }
             }
             eventCount += result.events.length;
@@ -108,12 +175,25 @@ export class EventFetcher {
             }
         }
 
+        const fetchedBeatmapsets = new Map<number, any>();
         for (const beatmapsetId of beatmapsetIds) {
-            await this.fetchBeatmapset(beatmapsetId);
+            const beatmapset = await this.fetchBeatmapset(beatmapsetId);
+            fetchedBeatmapsets.set(beatmapsetId, beatmapset);
         }
 
         // fetch errors throw before this, cursor stays and next run retries
         await StatsRepository.updateGlobalEventCursor(lastEventId);
+
+        // send after the cursor is saved, a retried run would post twice otherwise
+        for (const [beatmapsetId, event] of uploadEvents) {
+            const beatmapset = fetchedBeatmapsets.get(beatmapsetId);
+            try {
+                await this.sendUploadEmbed(event, beatmapsetId, beatmapset);
+                await new Promise(r => setTimeout(r, 500));
+            } catch (err) {
+                console.warn(chalk.yellow(`EventFetcher: failed to send upload embed for ${beatmapsetId}:`), err instanceof Error ? err.message : err);
+            }
+        }
 
         // below this id BeatmapsetFetcher backfills
         if (firstUploadId > 0) {

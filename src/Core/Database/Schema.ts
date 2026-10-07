@@ -202,7 +202,9 @@ export class Schema {
                 size_qualified bigint NULL DEFAULT 0,
                 size_pending bigint NULL DEFAULT 0,
 
-                last_event_id bigint NULL DEFAULT 0
+                last_event_id bigint NULL DEFAULT 0,
+                last_global_event_id bigint NULL DEFAULT 0,
+                backfill_target bigint NULL DEFAULT 0
             );
             ALTER TABLE public.${Environment.env.TABLE_STATS} OWNER TO ${Environment.env.PG_USERNAME};
         `,

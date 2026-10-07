@@ -16,15 +16,14 @@ export class BeatmapsetController {
     * Map Scanner
     * Used for initial scrape by incrementing set id
     */
-    static async findNextHighestBeatmapset(currentHighestId: number): Promise<number> {
-        let step = 10000; // How many sequential IDs to check
+    static async findNextHighestBeatmapset(currentHighestId: number, lastId: number): Promise<number> {
         let newHighest = currentHighestId;
         let foundAny = false;
 
-        console.log(chalk.cyan(`Searching for new beatmapsets ${currentHighestId + 1}-${currentHighestId + step}...`));
+        console.log(chalk.cyan(`Searching for new beatmapsets ${currentHighestId + 1}-${lastId}...`));
 
         // Check IDs sequentially with delay between requests
-        for (let id = currentHighestId + 1; id <= currentHighestId + step; id++) {
+        for (let id = currentHighestId + 1; id <= lastId; id++) {
             try {
                 // Add delay between requests (500ms)
                 if (id > currentHighestId + 1) {
@@ -50,7 +49,7 @@ export class BeatmapsetController {
         }
 
         if (!foundAny) {
-            console.log(chalk.gray(`No new beatmapsets found in range ${currentHighestId + 1}-${currentHighestId + step}`));
+            console.log(chalk.gray(`No new beatmapsets found in range ${currentHighestId + 1}-${lastId}`));
         } else {
             console.log(chalk.cyan(`Updated highest known beatmapset ID to ${newHighest}`));
         }
@@ -58,7 +57,7 @@ export class BeatmapsetController {
         return newHighest;
     }
   
-    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false): Promise<any> {
+    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false, throwOnError: boolean = false): Promise<any> {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
   
         try {
@@ -112,6 +111,9 @@ export class BeatmapsetController {
                 ? err.message
                 : `status_code: ${err?.status_code ?? '?'} | message: ${err?.message ?? '?'} | endpoint: ${Array.isArray(err?.endpoint) ? err.endpoint.join('/') : err?.endpoint ?? '?'}`;
             console.error(chalk.red(`Failed to fetch beatmapset ${id}:`), details);
+            if (throwOnError) {
+                throw err;
+            }
             return null;
         }
     }

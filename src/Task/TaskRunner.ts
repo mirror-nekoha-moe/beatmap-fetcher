@@ -3,6 +3,7 @@ import { ApiCallLogService } from '@Service/ApiCallLogService';
 import { BeatmapsetFetcher } from '@Task/Controller/BeatmapsetFetcher';
 import { BeatmapsetUpdater } from '@Task/Controller/BeatmapsetUpdater';
 import { CookieReader } from '@Task/Controller/CookieReader';
+import { EventFetcher } from '@Task/Controller/EventFetcher';
 import { GraveyardDownloader } from '@Task/Controller/GraveyardDownloader';
 import { MissingScanner } from '@Task/Controller/MissingScanner';
 import { OsuAuthenticator } from '@Task/Controller/OsuAuthenticator';
@@ -34,8 +35,12 @@ export class TaskRunner {
 
             BeatmapsetUpdater.run(1, 30);
 
-            // Crawler
+            // Backfill: scans old ids up to the first upload EventFetcher saw, then stops calling the API
             BeatmapsetFetcher.run(1, 10);
+
+            // Reads the global osu! event feed for new/updated beatmapsets
+            // Every 30 seconds, max 3 pages per run = max 6 calls per minute
+            EventFetcher.run(0.5, 1, 3);
 
             // Replaced by RankNotifier Task
             // RecentScanner.run(1440, 10);

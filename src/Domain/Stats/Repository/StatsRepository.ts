@@ -262,4 +262,32 @@ export class StatsRepository {
             [eventId]
         );
     }
+
+    static async getGlobalEventCursor(): Promise<number> {
+        const res = await pool.query(
+            `SELECT last_global_event_id FROM public.${Environment.env.TABLE_STATS} LIMIT 1`
+        );
+        return Number(res.rows[0]?.last_global_event_id ?? 0);
+    }
+
+    static async updateGlobalEventCursor(eventId: number): Promise<void> {
+        await pool.query(
+            `UPDATE public.${Environment.env.TABLE_STATS} SET last_global_event_id = $1`,
+            [eventId]
+        );
+    }
+
+    static async getBackfillTarget(): Promise<number> {
+        const res = await pool.query(
+            `SELECT backfill_target FROM public.${Environment.env.TABLE_STATS} LIMIT 1`
+        );
+        return Number(res.rows[0]?.backfill_target ?? 0);
+    }
+
+    static async updateBackfillTarget(beatmapsetId: number): Promise<void> {
+        await pool.query(
+            `UPDATE public.${Environment.env.TABLE_STATS} SET backfill_target = $1`,
+            [beatmapsetId]
+        );
+    }
 }

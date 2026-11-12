@@ -26,13 +26,16 @@ export interface Beatmap {
     cs: number | null;
     deleted_at: Date | null;
     drain: number | null;
+    failtimes: object | null;
     hit_length: bigint | null;
     is_scoreable: boolean | null;
     last_updated: Date | null;
     mode_int: number | null;
+    owners: object[] | null;
     passcount: bigint | null;
     playcount: bigint | null;
     url: string | null;
     checksum: string | null;
     max_combo: bigint | null;
+    top_tag_ids: object[] | null;
 }

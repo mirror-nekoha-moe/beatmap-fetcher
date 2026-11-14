@@ -322,6 +322,28 @@ export class BeatmapsetRepository {
         return res.rows;
     }
 
+    static async getFirstRankedDate(): Promise<Date | null> {
+        const res = await pool.query(
+            `SELECT MIN(ranked_date) AS first FROM public.${Environment.env.TABLE_BEATMAPSET}
+             WHERE status IN ('ranked', 'approved', 'loved')`
+        );
+        return res.rows[0]?.first ?? null;
+    }
+
+    static async getRankedIdsByDate(from: Date, to: Date, modeColumn: string): Promise<number[]> {
+        const res = await pool.query(
+            `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET}
+             WHERE status IN ('ranked', 'approved', 'loved')
+               AND downloaded = true
+               AND ranked_date >= $1
+               AND ranked_date < $2
+               AND ${modeColumn} > 0
+             ORDER BY id ASC`,
+            [from, to]
+        );
+        return res.rows.map(r => Number(r.id));
+    }
+
     // Flags
 
     static async markBeatmapsetDownloaded(id: number, value = true): Promise<void> {

@@ -11,6 +11,7 @@
     "build:watch": "tsc --watch"
   },
   "dependencies": {
+    "archiver": "^8.0.0",
     "chalk": "^4.1.2",
     "dotenv": "^17.2.3",
     "node-libcurl": "^4.1.0",
@@ -19,6 +20,7 @@
     "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
+    "@types/archiver": "^8.0.0",
     "@types/node": "^24.10.4",
     "@types/node-fetch": "^2.6.13",
     "@types/pg": "^8.15.6",

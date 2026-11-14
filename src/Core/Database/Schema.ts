@@ -245,5 +245,18 @@ export class Schema {
             );
             ALTER TABLE public.${Environment.env.TABLE_API_CALLS_V2} OWNER TO ${Environment.env.PG_USERNAME};
         `,
+
+        archive: `
+            CREATE TABLE IF NOT EXISTS public.${Environment.env.TABLE_ARCHIVE} (
+                "archive_date" DATE NOT NULL,
+                "mode" TEXT NOT NULL,
+                "file_name" TEXT NOT NULL,
+                "size_gb" REAL NOT NULL,
+                "beatmapset_count" INTEGER NOT NULL,
+                "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                CONSTRAINT ${Environment.env.TABLE_ARCHIVE}_pkey PRIMARY KEY ("archive_date", "mode")
+            );
+            ALTER TABLE public.${Environment.env.TABLE_ARCHIVE} OWNER TO ${Environment.env.PG_USERNAME};
+        `,
     };
 }

@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { ApiCallLogService } from '@Service/ApiCallLogService';
+import { ArchiveBuilder } from '@Task/Controller/ArchiveBuilder';
 import { BeatmapsetFetcher } from '@Task/Controller/BeatmapsetFetcher';
 import { BeatmapsetUpdater } from '@Task/Controller/BeatmapsetUpdater';
 import { CookieReader } from '@Task/Controller/CookieReader';
@@ -53,6 +54,9 @@ export class TaskRunner {
 
             // Download graveyard/pending/wip maps slowly (once per day, 400/day default)
             GraveyardDownloader.run(1440, 30);
+
+            // Zip finished months by mode, once per day
+            ArchiveBuilder.run(1440, 60);
 
             // Discord Bot command handler
             TaskQueueWorker.run(10);

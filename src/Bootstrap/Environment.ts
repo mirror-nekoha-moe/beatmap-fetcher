@@ -38,9 +38,11 @@ export class Environment {
             'TABLE_STATS',
             'TABLE_API_CALLS_V1',
             'TABLE_API_CALLS_V2',
+            'TABLE_ARCHIVE',
 
             // Settings
             'STORAGE_DIR',
+            'ARCHIVE_DIR',
             'COOKIE_FILE',
             'DEBUG_LOGGING',
             'TRACK_ALL_MAPS'
@@ -93,8 +95,10 @@ export class Environment {
         TABLE_STATS: String,
         TABLE_API_CALLS_V1: String,
         TABLE_API_CALLS_V2: String,
+        TABLE_ARCHIVE: String,
 
         STORAGE_DIR: String,
+        ARCHIVE_DIR: String,
         COOKIE_FILE: String,
         DEBUG_LOGGING: Boolean,
         TRACK_ALL_MAPS: Boolean,

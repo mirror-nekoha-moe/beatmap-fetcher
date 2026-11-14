@@ -192,6 +192,7 @@ export class BeatmapsetController {
             slimcover:      rawBeatmapset?.covers?.slimcover ?? null,
             slimcover_2x:   rawBeatmapset?.covers?.["slimcover@2x"] ?? null,
 
+            description: rawBeatmapset.description?.description ?? null,
             download_disabled: rawBeatmapset.availability.download_disabled ?? null,
             more_information: rawBeatmapset.availability.more_information ?? null,
             playcount: rawBeatmapset.play_count ?? null,
@@ -284,10 +285,9 @@ export class BeatmapsetController {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
 
         try {
-            // Get only beatmapsets worth re-checking (qualified, pending/wip, downloaded=false, or recently updated)
-            const ids = await BeatmapsetRepository.getBeatmapsetsNeedingRefresh();
+            const ids = await BeatmapsetRepository.getAllBeatmapset();
 
-            console.log(chalk.cyan(`Refreshing ${ids.length} beatmapsets from osu! API (filtered)...`));
+            console.log(chalk.cyan(`Refreshing ${ids.length} beatmapsets from osu! API...`));
 
             // Process in batches of 50 (osu! API's maximum batch size)
             for (let i = 0; i < ids.length; i += 50) {
@@ -311,7 +311,7 @@ export class BeatmapsetController {
                         const results = await Promise.all(promises);
                         beatmapsets.push(...results);
                         
-                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                     
                     // Create a map of successfully retrieved beatmapsets

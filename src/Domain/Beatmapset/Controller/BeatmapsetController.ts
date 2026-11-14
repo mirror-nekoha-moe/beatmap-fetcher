@@ -311,7 +311,7 @@ export class BeatmapsetController {
                         const results = await Promise.all(promises);
                         beatmapsets.push(...results);
                         
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        await new Promise(resolve => setTimeout(resolve, 3000));
                     }
                     
                     // Create a map of successfully retrieved beatmapsets

@@ -3,6 +3,9 @@ export class DatabaseHelper {
         if (value === undefined || value === null) {
             return null;
         }
-        return JSON.stringify(value);
+        const json = JSON.stringify(value);
+
+        // osu! apiv2 format
+        return json.replaceAll('.000Z"', 'Z"');
     }
 };

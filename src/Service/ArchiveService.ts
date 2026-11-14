@@ -2,8 +2,13 @@ import chalk from 'chalk';
 import fs from 'fs';
 import fsp from 'fs/promises';
 import path from 'path';
+import { once } from 'events';
+import { pipeline } from 'stream/promises';
 import { ZipArchive } from 'archiver';
 import { Environment } from '@Bootstrap/Environment';
+
+// 4MB
+const CHUNK_SIZE = 4 * 1024 * 1024;
 
 export class ArchiveService {
     static async writeArchive(name: string, folder: string, beatmapsetIds: number[]): Promise<{ fileSize: number; beatmapsetCount: number } | null> {
@@ -28,26 +33,14 @@ export class ArchiveService {
         await fsp.mkdir(archiveFolder, { recursive: true });
 
         const filePath = path.join(archiveFolder, `${name}.zip`);
-        // the server could stream a half written file otherwise
         const tempPath = `${filePath}.tmp`;
 
-        // .osz is already compressed
         const archive = new ZipArchive({ store: true });
-        const output = fs.createWriteStream(tempPath);
-
-        const written = new Promise<void>((resolve, reject) => {
-            output.on('close', () => resolve());
-            output.on('error', reject);
-            archive.on('error', reject);
-        });
-        archive.pipe(output);
-
-        for (const entry of entries) {
-            archive.file(entry.oszPath, { name: entry.entryName });
-        }
-
-        await archive.finalize();
-        await written;
+        const output = fs.createWriteStream(tempPath, { highWaterMark: CHUNK_SIZE });
+        await Promise.all([
+            pipeline(archive, output),
+            ArchiveService.appendOszFiles(archive, entries),
+        ]);
 
         await fsp.rename(tempPath, filePath);
         const stats = await fsp.stat(filePath);
@@ -56,6 +49,16 @@ export class ArchiveService {
             fileSize: stats.size,
             beatmapsetCount: entries.length,
         };
+    }
+
+    private static async appendOszFiles(archive: ZipArchive, entries: { oszPath: string; entryName: string }[]): Promise<void> {
+        for (const entry of entries) {
+            const oszStream = fs.createReadStream(entry.oszPath, { highWaterMark: CHUNK_SIZE });
+            archive.append(oszStream, { name: entry.entryName });
+            // only one file open at a time
+            await once(oszStream, 'close');
+        }
+        await archive.finalize();
     }
 
     // a folder can have more than one .osz, take the biggest

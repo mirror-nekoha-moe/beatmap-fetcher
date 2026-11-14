@@ -141,9 +141,9 @@ export class GraveyardDownloader {
     }
 
     static async run(interval: number, errorDelay: number): Promise<void> {
-        // const initialDelay = 24 * 60 * 60 * 1000; // 24 hours
+        const initialDelay = 24 * 60 * 60 * 1000; // 24 hours
         // a couple of more maps won't hurt when restarting
-        const initialDelay = 0;
+        // const initialDelay = 0;
         await BaseTask.runTask(interval * 60 * 1000, errorDelay * 60 * 1000, this.name, async () => {
             await this.downloadGraveyardMaps();
         }, initialDelay);

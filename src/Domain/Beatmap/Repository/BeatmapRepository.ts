@@ -1,6 +1,7 @@
 import { createPool } from '@Core/Database/Connection';
 import { Beatmap } from '@Domain/Beatmap/Model/BeatmapModel';
 import { Environment } from '@Bootstrap/Environment';
+import { DatabaseHelper } from '@Core/Database/Helper';
 
 const pool = createPool();
 
@@ -21,6 +22,7 @@ export class BeatmapRepository {
                 deleted_at,
                 difficulty_rating,
                 drain,
+                failtimes,
                 hit_length,
                 id,
                 is_scoreable,
@@ -29,9 +31,11 @@ export class BeatmapRepository {
                 max_combo,
                 mode,
                 mode_int,
+                owners,
                 passcount,
                 playcount,
                 status,
+                top_tag_ids,
                 total_length,
                 url,
                 user_id,
@@ -42,7 +46,8 @@ export class BeatmapRepository {
                 $11,$12,$13,$14,$15,
                 $16,$17,$18,$19,$20,
                 $21,$22,$23,$24,$25,
-                $26,$27,$28
+                $26,$27,$28,$29,$30,
+                $31
             )
             ON CONFLICT (id) DO UPDATE SET
                 accuracy = EXCLUDED.accuracy,
@@ -58,6 +63,7 @@ export class BeatmapRepository {
                 deleted_at = EXCLUDED.deleted_at,
                 difficulty_rating = EXCLUDED.difficulty_rating,
                 drain = EXCLUDED.drain,
+                failtimes = EXCLUDED.failtimes,
                 hit_length = EXCLUDED.hit_length,
                 is_scoreable = EXCLUDED.is_scoreable,
                 last_updated = EXCLUDED.last_updated,
@@ -65,9 +71,11 @@ export class BeatmapRepository {
                 max_combo = EXCLUDED.max_combo,
                 mode = EXCLUDED.mode,
                 mode_int = EXCLUDED.mode_int,
+                owners = EXCLUDED.owners,
                 passcount = EXCLUDED.passcount,
                 playcount = EXCLUDED.playcount,
                 status = EXCLUDED.status,
+                top_tag_ids = EXCLUDED.top_tag_ids,
                 total_length = EXCLUDED.total_length,
                 url = EXCLUDED.url,
                 user_id = EXCLUDED.user_id,
@@ -86,6 +94,7 @@ export class BeatmapRepository {
             beatmap.deleted_at,
             beatmap.difficulty_rating,
             beatmap.drain,
+            DatabaseHelper.toJsonb(beatmap.failtimes),
             beatmap.hit_length,
             beatmap.id,
             beatmap.is_scoreable,
@@ -94,9 +103,11 @@ export class BeatmapRepository {
             beatmap.max_combo,
             beatmap.mode,
             beatmap.mode_int,
+            DatabaseHelper.toJsonb(beatmap.owners),
             beatmap.passcount,
             beatmap.playcount,
             beatmap.status,
+            DatabaseHelper.toJsonb(beatmap.top_tag_ids),
             beatmap.total_length,
             beatmap.url,
             beatmap.user_id,

@@ -139,13 +139,11 @@ export class GraveyardDownloader {
 
         console.log(chalk.green(`GraveyardDownloader: Finished. Downloaded: ${downloaded}, Failed: ${failed}, Disabled-skipped: ${skippedDisabled}, Total processed: ${totalSeen}`));
     }
-    /**
-     * Run once per day (1440 minutes), with 30 minute error retry delay.
-     * Delayed by 24h on first start to avoid hammering cold storage on restarts.
-     */
+
     static async run(interval: number, errorDelay: number): Promise<void> {
         // const initialDelay = 24 * 60 * 60 * 1000; // 24 hours
-        const initialDelay = 0; // 24 hours
+        // a couple of more maps won't hurt when restarting
+        const initialDelay = 0;
         await BaseTask.runTask(interval * 60 * 1000, errorDelay * 60 * 1000, this.name, async () => {
             await this.downloadGraveyardMaps();
         }, initialDelay);

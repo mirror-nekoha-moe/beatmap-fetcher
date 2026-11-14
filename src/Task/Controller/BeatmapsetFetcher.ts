@@ -6,6 +6,8 @@ import { BaseTask } from '@Task/BaseTask';
 
 import { config } from 'Config';
 
+const BACKFILL_STEP = 10000;
+
 export class BeatmapsetFetcher {
     private static async fetchHighestKnownBeatmapsetId(): Promise<number> {
         try {
@@ -29,14 +31,30 @@ export class BeatmapsetFetcher {
     private static async refreshNewBeatmapsets(): Promise<void> {
         // const currentHighest = config.highestKnownBeatmapsetId || 0;
         const currentHighest = Number(await StatsRepository.getScanCursor() ?? 0);
-        const newHighest = await BeatmapsetController.findNextHighestBeatmapset(currentHighest);
+        const backfillTarget = await StatsRepository.getBackfillTarget();
 
-        if (newHighest > currentHighest) {
-            console.log(chalk.green(`Highest beatmapset updated: ${currentHighest} -> ${newHighest}`));
-            await StatsRepository.updateScanCursor(newHighest);
-        } else {
-            console.log(chalk.gray(`No new beatmapsets beyond ${currentHighest}`));
+        if (backfillTarget === 0) {
+            console.log(chalk.gray('Backfill waiting for EventFetcher to set a target'));
+            return;
         }
+
+        // target and above come from EventFetcher
+        const lastBackfillId = backfillTarget - 1;
+        if (currentHighest >= lastBackfillId) {
+            console.log(chalk.gray(`Backfill complete (scan cursor: ${currentHighest}, target: ${backfillTarget})`));
+            return;
+        }
+
+        let lastId = currentHighest + BACKFILL_STEP;
+        if (lastId > lastBackfillId) {
+            lastId = lastBackfillId;
+        }
+
+        await BeatmapsetController.findNextHighestBeatmapset(currentHighest, lastId);
+
+        // ids below target won't appear later, mark range as scanned
+        await StatsRepository.updateScanCursor(lastId);
+        console.log(chalk.green(`Backfill scanned up to ${lastId} (target: ${backfillTarget})`));
     }
     
     static async run(interval: number, errorDelay: number): Promise<void> {

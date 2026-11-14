@@ -16,15 +16,14 @@ export class BeatmapsetController {
     * Map Scanner
     * Used for initial scrape by incrementing set id
     */
-    static async findNextHighestBeatmapset(currentHighestId: number): Promise<number> {
-        let step = 10000; // How many sequential IDs to check
+    static async findNextHighestBeatmapset(currentHighestId: number, lastId: number): Promise<number> {
         let newHighest = currentHighestId;
         let foundAny = false;
 
-        console.log(chalk.cyan(`Searching for new beatmapsets ${currentHighestId + 1}-${currentHighestId + step}...`));
+        console.log(chalk.cyan(`Searching for new beatmapsets ${currentHighestId + 1}-${lastId}...`));
 
         // Check IDs sequentially with delay between requests
-        for (let id = currentHighestId + 1; id <= currentHighestId + step; id++) {
+        for (let id = currentHighestId + 1; id <= lastId; id++) {
             try {
                 // Add delay between requests (500ms)
                 if (id > currentHighestId + 1) {
@@ -50,7 +49,7 @@ export class BeatmapsetController {
         }
 
         if (!foundAny) {
-            console.log(chalk.gray(`No new beatmapsets found in range ${currentHighestId + 1}-${currentHighestId + step}`));
+            console.log(chalk.gray(`No new beatmapsets found in range ${currentHighestId + 1}-${lastId}`));
         } else {
             console.log(chalk.cyan(`Updated highest known beatmapset ID to ${newHighest}`));
         }
@@ -58,7 +57,7 @@ export class BeatmapsetController {
         return newHighest;
     }
   
-    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false): Promise<any> {
+    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false, throwOnError: boolean = false): Promise<any> {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
   
         try {
@@ -112,6 +111,9 @@ export class BeatmapsetController {
                 ? err.message
                 : `status_code: ${err?.status_code ?? '?'} | message: ${err?.message ?? '?'} | endpoint: ${Array.isArray(err?.endpoint) ? err.endpoint.join('/') : err?.endpoint ?? '?'}`;
             console.error(chalk.red(`Failed to fetch beatmapset ${id}:`), details);
+            if (throwOnError) {
+                throw err;
+            }
             return null;
         }
     }
@@ -190,6 +192,7 @@ export class BeatmapsetController {
             slimcover:      rawBeatmapset?.covers?.slimcover ?? null,
             slimcover_2x:   rawBeatmapset?.covers?.["slimcover@2x"] ?? null,
 
+            description: rawBeatmapset.description?.description ?? null,
             download_disabled: rawBeatmapset.availability.download_disabled ?? null,
             more_information: rawBeatmapset.availability.more_information ?? null,
             playcount: rawBeatmapset.play_count ?? null,
@@ -282,10 +285,9 @@ export class BeatmapsetController {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
 
         try {
-            // Get only beatmapsets worth re-checking (qualified, pending/wip, downloaded=false, or recently updated)
-            const ids = await BeatmapsetRepository.getBeatmapsetsNeedingRefresh();
+            const ids = await BeatmapsetRepository.getAllBeatmapset();
 
-            console.log(chalk.cyan(`Refreshing ${ids.length} beatmapsets from osu! API (filtered)...`));
+            console.log(chalk.cyan(`Refreshing ${ids.length} beatmapsets from osu! API...`));
 
             // Process in batches of 50 (osu! API's maximum batch size)
             for (let i = 0; i < ids.length; i += 50) {
@@ -309,7 +311,7 @@ export class BeatmapsetController {
                         const results = await Promise.all(promises);
                         beatmapsets.push(...results);
                         
-                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                     
                     // Create a map of successfully retrieved beatmapsets

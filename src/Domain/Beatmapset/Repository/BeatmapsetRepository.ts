@@ -1,6 +1,7 @@
 import { createPool } from '@Core/Database/Connection';
 import { Beatmapset } from '@Domain/Beatmapset/Model/BeatmapsetModel';
 import { Environment } from '@Bootstrap/Environment';
+import { DatabaseHelper } from '@Core/Database/Helper';
 
 const pool = createPool();
 
@@ -13,22 +14,29 @@ export class BeatmapsetRepository {
                 artist_unicode,
                 beatmap_count,
                 bpm,
+                can_be_hyped,
                 card,
                 card_2x,
+                converts,
                 cover,
                 cover_2x,
                 creator,
+                current_nominations,
                 deleted_at,
                 description,
+                discussion_enabled,
+                discussion_locked,
                 download_disabled,
                 downloaded,
                 favourite_count,
                 file_size,
                 genre_id,
+                hype,
                 id,
                 is_scoreable,
                 language_id,
                 last_updated,
+                legacy_thread_url,
                 list,
                 list_2x,
                 mode_fruits_count,
@@ -36,12 +44,18 @@ export class BeatmapsetRepository {
                 mode_osu_count,
                 mode_taiko_count,
                 more_information,
+                nominations_summary,
                 nsfw,
                 "offset",
+                pack_tags,
                 playcount,
                 preview_url,
                 ranked_date,
                 rating,
+                ratings,
+                recent_favourites,
+                related_tags,
+                related_users,
                 slimcover,
                 slimcover_2x,
                 source,
@@ -52,7 +66,10 @@ export class BeatmapsetRepository {
                 tags,
                 title,
                 title_unicode,
+                track_id,
+                "user",
                 user_id,
+                version_count,
                 video
             ) VALUES (
                 $1,$2,$3,$4,$5,
@@ -64,7 +81,10 @@ export class BeatmapsetRepository {
                 $31,$32,$33,$34,$35,
                 $36,$37,$38,$39,$40,
                 $41,$42,$43,$44,$45,
-                $46
+                $46,$47,$48,$49,$50,
+                $51,$52,$53,$54,$55,
+                $56,$57,$58,$59,$60,
+                $61,$62
             )
             ON CONFLICT (id) DO UPDATE SET
                 anime_cover = EXCLUDED.anime_cover,
@@ -72,21 +92,28 @@ export class BeatmapsetRepository {
                 artist_unicode = EXCLUDED.artist_unicode,
                 beatmap_count = EXCLUDED.beatmap_count,
                 bpm = EXCLUDED.bpm,
+                can_be_hyped = EXCLUDED.can_be_hyped,
                 card = EXCLUDED.card,
                 card_2x = EXCLUDED.card_2x,
+                converts = EXCLUDED.converts,
                 cover = EXCLUDED.cover,
                 cover_2x = EXCLUDED.cover_2x,
                 creator = EXCLUDED.creator,
+                current_nominations = EXCLUDED.current_nominations,
                 deleted_at = EXCLUDED.deleted_at,
                 description = EXCLUDED.description,
+                discussion_enabled = EXCLUDED.discussion_enabled,
+                discussion_locked = EXCLUDED.discussion_locked,
                 download_disabled = EXCLUDED.download_disabled,
                 downloaded = EXCLUDED.downloaded,
                 favourite_count = EXCLUDED.favourite_count,
                 file_size = EXCLUDED.file_size,
                 genre_id = EXCLUDED.genre_id,
+                hype = EXCLUDED.hype,
                 is_scoreable = EXCLUDED.is_scoreable,
                 language_id = EXCLUDED.language_id,
                 last_updated = EXCLUDED.last_updated,
+                legacy_thread_url = EXCLUDED.legacy_thread_url,
                 list = EXCLUDED.list,
                 list_2x = EXCLUDED.list_2x,
                 mode_fruits_count = EXCLUDED.mode_fruits_count,
@@ -94,12 +121,18 @@ export class BeatmapsetRepository {
                 mode_osu_count = EXCLUDED.mode_osu_count,
                 mode_taiko_count = EXCLUDED.mode_taiko_count,
                 more_information = EXCLUDED.more_information,
+                nominations_summary = EXCLUDED.nominations_summary,
                 nsfw = EXCLUDED.nsfw,
                 "offset" = EXCLUDED."offset",
+                pack_tags = EXCLUDED.pack_tags,
                 playcount = EXCLUDED.playcount,
                 preview_url = EXCLUDED.preview_url,
                 ranked_date = EXCLUDED.ranked_date,
                 rating = EXCLUDED.rating,
+                ratings = EXCLUDED.ratings,
+                recent_favourites = EXCLUDED.recent_favourites,
+                related_tags = EXCLUDED.related_tags,
+                related_users = EXCLUDED.related_users,
                 slimcover = EXCLUDED.slimcover,
                 slimcover_2x = EXCLUDED.slimcover_2x,
                 source = EXCLUDED.source,
@@ -110,7 +143,10 @@ export class BeatmapsetRepository {
                 tags = EXCLUDED.tags,
                 title = EXCLUDED.title,
                 title_unicode = EXCLUDED.title_unicode,
+                track_id = EXCLUDED.track_id,
+                "user" = EXCLUDED."user",
                 user_id = EXCLUDED.user_id,
+                version_count = EXCLUDED.version_count,
                 video = EXCLUDED.video
         `, [
             beatmapset.anime_cover,
@@ -118,22 +154,29 @@ export class BeatmapsetRepository {
             beatmapset.artist_unicode,
             beatmapset.beatmap_count,
             beatmapset.bpm,
+            beatmapset.can_be_hyped,
             beatmapset.card,
             beatmapset.card_2x,
+            DatabaseHelper.toJsonb(beatmapset.converts),
             beatmapset.cover,
             beatmapset.cover_2x,
             beatmapset.creator,
+            DatabaseHelper.toJsonb(beatmapset.current_nominations),
             beatmapset.deleted_at,
             beatmapset.description,
+            beatmapset.discussion_enabled,
+            beatmapset.discussion_locked,
             beatmapset.download_disabled,
             beatmapset.downloaded,
             beatmapset.favourite_count,
             beatmapset.file_size,
             beatmapset.genre_id,
+            DatabaseHelper.toJsonb(beatmapset.hype),
             beatmapset.id,
             beatmapset.is_scoreable,
             beatmapset.language_id,
             beatmapset.last_updated,
+            beatmapset.legacy_thread_url,
             beatmapset.list,
             beatmapset.list_2x,
             beatmapset.mode_fruits_count,
@@ -141,12 +184,18 @@ export class BeatmapsetRepository {
             beatmapset.mode_osu_count,
             beatmapset.mode_taiko_count,
             beatmapset.more_information,
+            DatabaseHelper.toJsonb(beatmapset.nominations_summary),
             beatmapset.nsfw,
             beatmapset.offset,
+            DatabaseHelper.toJsonb(beatmapset.pack_tags),
             beatmapset.playcount,
             beatmapset.preview_url,
             beatmapset.ranked_date,
             beatmapset.rating,
+            DatabaseHelper.toJsonb(beatmapset.ratings),
+            DatabaseHelper.toJsonb(beatmapset.recent_favourites),
+            DatabaseHelper.toJsonb(beatmapset.related_tags),
+            DatabaseHelper.toJsonb(beatmapset.related_users),
             beatmapset.slimcover,
             beatmapset.slimcover_2x,
             beatmapset.source,
@@ -157,7 +206,10 @@ export class BeatmapsetRepository {
             beatmapset.tags,
             beatmapset.title,
             beatmapset.title_unicode,
+            beatmapset.track_id,
+            DatabaseHelper.toJsonb(beatmapset.user),
             beatmapset.user_id,
+            beatmapset.version_count,
             beatmapset.video
         ]);
     }
@@ -202,15 +254,6 @@ export class BeatmapsetRepository {
         return res.rows.map(r => Number(r.id));
     }
 
-    /**
-     * Returns only beatmapset IDs worth periodically re-checking from the API:
-     * - qualified maps (volatile status, may rank or disqualify)
-     * - pending/wip maps (may become ranked)
-     * - any map with downloaded=false (needs download retry)
-     * - ranked/loved/approved maps updated in the last 6 months (recently touched)
-     *
-     * Skips stable old ranked/loved maps that virtually never change.
-     */
     static async getQualifiedBeatmapsetIds(): Promise<number[]> {
         const res = await pool.query(
             `SELECT id FROM public.${Environment.env.TABLE_BEATMAPSET}
@@ -279,9 +322,7 @@ export class BeatmapsetRepository {
         return res.rows;
     }
 
-    // -----------------------------------------------------
     // Flags
-    // -----------------------------------------------------
 
     static async markBeatmapsetDownloaded(id: number, value = true): Promise<void> {
         await pool.query(

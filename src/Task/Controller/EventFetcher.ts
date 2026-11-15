@@ -2,14 +2,13 @@ import chalk from 'chalk';
 
 import { BeatmapsetController } from '@Domain/Beatmapset/Controller/BeatmapsetController';
 import { StatsRepository } from '@Domain/Stats/Repository/StatsRepository';
-import { Environment } from '@Bootstrap/Environment';
 import { OsuApiService } from '@Service/OsuApiService';
+import { WebhookService } from '@Service/WebhookService';
 import { BaseTask } from '@Task/BaseTask';
 
 const BEATMAPSET_TYPES = new Set(['beatmapsetUpload', 'beatmapsetUpdate', 'beatmapsetRevive', 'beatmapsetDelete']);
 const PAGE_SIZE = 50;
 const MAX_FETCH_ATTEMPTS = 5;
-const UPLOAD_EMBED_COLOR = 0xffcc22;
 
 export class EventFetcher {
     private static failedAttempts = new Map<number, number>();
@@ -54,66 +53,6 @@ export class EventFetcher {
             this.failedAttempts.set(beatmapsetId, attempts);
             throw err;
         }
-    }
-
-    // beatmapset is null if TRACK_ALL_MAPS is off, use event data then
-    private static async sendUploadEmbed(event: any, beatmapsetId: number, beatmapset: any): Promise<void> {
-        const webhookUrl = Environment.env.MIRROR_LOG_UPLOAD;
-        if (!webhookUrl) return;
-
-        let title = event.beatmapset.title;
-        let mapper = event.user?.username ?? '/';
-        let mapperUrl = `https://osu.ppy.sh${event.user?.url ?? ''}`;
-        let status = '/';
-        let cover = null;
-
-        if (beatmapset) {
-            const artist = beatmapset.artist_unicode || beatmapset.artist;
-            const songTitle = beatmapset.title_unicode || beatmapset.title;
-            title = `${artist} - ${songTitle}`;
-            mapper = beatmapset.creator ?? mapper;
-            mapperUrl = `https://osu.ppy.sh/users/${beatmapset.user_id}`;
-            status = beatmapset.status;
-            cover = beatmapset.covers?.['cover@2x'] ?? beatmapset.covers?.cover ?? null;
-        }
-
-        const embed: Record<string, any> = {
-            title: `New Upload: ${title}`,
-            url: `https://osu.ppy.sh/beatmapsets/${beatmapsetId}`,
-            color: UPLOAD_EMBED_COLOR,
-            fields: [
-                {
-                    name: 'Mapper',
-                    value: `[${mapper}](${mapperUrl})`,
-                    inline: true
-                },
-                {
-                    name: 'Status',
-                    value: status,
-                    inline: true
-                },
-            ],
-            footer: {
-                text: `ID: ${beatmapsetId}`
-            },
-            timestamp: event.created_at,
-        };
-
-        if (cover) {
-            embed.image = {
-                url: cover
-            };
-        }
-
-        await fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                embeds: [embed]
-            }),
-        });
     }
 
     private static async processEvents(maxPages: number): Promise<void> {
@@ -188,7 +127,7 @@ export class EventFetcher {
         for (const [beatmapsetId, event] of uploadEvents) {
             const beatmapset = fetchedBeatmapsets.get(beatmapsetId);
             try {
-                await this.sendUploadEmbed(event, beatmapsetId, beatmapset);
+                await WebhookService.sendUploadEmbed(event, beatmapsetId, beatmapset);
                 await new Promise(r => setTimeout(r, 500));
             } catch (err) {
                 console.warn(chalk.yellow(`EventFetcher: failed to send upload embed for ${beatmapsetId}:`), err instanceof Error ? err.message : err);

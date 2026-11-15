@@ -1,13 +1,11 @@
-import fetch from 'node-fetch';
 import chalk from 'chalk';
-import { Environment } from '@Bootstrap/Environment';
+import { WebhookService } from '@Service/WebhookService';
 
 chalk.level = 3;
 
 export class Logger {
     private static logBuffer: string[] = [];
     private static batchTimer: NodeJS.Timeout | null = null;
-    private static WEBHOOK_URL = Environment.env.MIRROR_LOG_WEBHOOK;
     private static readonly BATCH_SIZE = 10;
     private static readonly BATCH_INTERVAL = 1000;
 
@@ -22,13 +20,9 @@ export class Logger {
     }
 
     private static sendBatch(): void {
-        if (Logger.logBuffer.length === 0 || !Logger.WEBHOOK_URL) return;
+        if (Logger.logBuffer.length === 0) return;
         const content = '```ansi\n' + Logger.logBuffer.join('\n').slice(0, 1900) + '\n```';
-        fetch(Logger.WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content }),
-        }).catch(() => {});
+        WebhookService.sendLog(content).catch(() => {});
         Logger.logBuffer = [];
     }
 

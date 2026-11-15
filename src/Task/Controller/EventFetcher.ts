@@ -6,12 +6,16 @@ import { OsuApiService } from '@Service/OsuApiService';
 import { WebhookService } from '@Service/WebhookService';
 import { BaseTask } from '@Task/BaseTask';
 
-const BEATMAPSET_TYPES = new Set(['beatmapsetUpload', 'beatmapsetUpdate', 'beatmapsetRevive', 'beatmapsetDelete']);
+const BEATMAPSET_TYPES = new Set(['beatmapsetApprove', 'beatmapsetUpload', 'beatmapsetUpdate', 'beatmapsetRevive', 'beatmapsetDelete']);
 const PAGE_SIZE = 50;
 const MAX_FETCH_ATTEMPTS = 5;
 
 export class EventFetcher {
     private static failedAttempts = new Map<number, number>();
+
+    // TODO
+    private static async handleEvent(event: any): Promise<void> {
+    }
 
     // cursor is base64 {"event_id": N}, build it ourselves to resume
     private static makeCursor(eventId: number): string {
@@ -34,9 +38,10 @@ export class EventFetcher {
         return result.events[0]?.id ?? 0;
     }
 
-    private static async fetchBeatmapset(beatmapsetId: number): Promise<any> {
+    private static async fetchBeatmapset(beatmapsetId: number, download: boolean): Promise<any> {
         try {
-            const beatmapset = await BeatmapsetController.fetchBeatmapsetFromOsu(beatmapsetId, false, false, true);
+            // skip GraveyardDownloader
+            const beatmapset = await BeatmapsetController.fetchBeatmapsetFromOsu(beatmapsetId, download, false, true, download);
             this.failedAttempts.delete(beatmapsetId);
             return beatmapset;
         } catch (err) {
@@ -69,6 +74,8 @@ export class EventFetcher {
 
         const beatmapsetIds = new Set<number>();
         const uploadEvents = new Map<number, any>();
+        const updatedIds = new Set<number>();
+        const revivedIds = new Set<number>();
         let firstUploadId = 0;
         let eventCount = 0;
         let page = 0;
@@ -88,6 +95,7 @@ export class EventFetcher {
                 if (!BEATMAPSET_TYPES.has(event.type)) {
                     continue;
                 }
+                await this.handleEvent(event);
 
                 const url = (event as any).beatmapset?.url as string | undefined;
                 if (!url) {
@@ -105,6 +113,13 @@ export class EventFetcher {
                         firstUploadId = beatmapsetId;
                     }
                 }
+                // only on new map files, not metadata edits
+                if (event.type === 'beatmapsetUpdate') {
+                    updatedIds.add(beatmapsetId);
+                }
+                if (event.type === 'beatmapsetRevive') {
+                    revivedIds.add(beatmapsetId);
+                }
             }
             eventCount += result.events.length;
 
@@ -116,7 +131,10 @@ export class EventFetcher {
 
         const fetchedBeatmapsets = new Map<number, any>();
         for (const beatmapsetId of beatmapsetIds) {
-            const beatmapset = await this.fetchBeatmapset(beatmapsetId);
+            const isUpload = uploadEvents.has(beatmapsetId);
+            const isUpdate = updatedIds.has(beatmapsetId);
+            const isRevive = revivedIds.has(beatmapsetId);
+            const beatmapset = await this.fetchBeatmapset(beatmapsetId, isUpload || isUpdate || isRevive);
             fetchedBeatmapsets.set(beatmapsetId, beatmapset);
         }
 

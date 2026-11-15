@@ -40,14 +40,14 @@ export class TaskRunner {
             BeatmapsetFetcher.run(1, 10);
 
             // Reads the global osu! event feed for new/updated beatmapsets
-            // Every 30 seconds, max 3 pages per run = max 6 calls per minute
-            EventFetcher.run(0.5, 1, 3);
+            // Every 9 seconds, max 3 pages per run = max 20 calls per minute
+            EventFetcher.run(0.15, 1, 3);
 
             // Replaced by RankNotifier Task
             // RecentScanner.run(1440, 10);
 
             // Notify Discord on rank/love events and downloads those maps
-            RankNotifier.run(1, 2);
+            RankNotifier.run(0.15, 2);
 
             // Check qualified maps once per day, updates them to ranked/loved if they passed
             QualifiedUpdater.run(1440, 10);

@@ -57,7 +57,7 @@ export class BeatmapsetController {
         return newHighest;
     }
   
-    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false, throwOnError: boolean = false): Promise<any> {
+    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false, throwOnError: boolean = false, downloadUnranked: boolean = false): Promise<any> {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
   
         try {
@@ -105,7 +105,7 @@ export class BeatmapsetController {
                 return null;
             }
 
-            return await this.processBeatmapset(rawBeatmapset, allowDownload, forceRedownload);
+            return await this.processBeatmapset(rawBeatmapset, allowDownload, forceRedownload, downloadUnranked);
         } catch (err: any) {
             const details = err instanceof Error
                 ? err.message
@@ -121,7 +121,7 @@ export class BeatmapsetController {
     /**
     * Beatmapset processer
     */
-    static async processBeatmapset(rawBeatmapset: any, allowDownload: boolean, forceRedownload: boolean = false): Promise<any> {
+    static async processBeatmapset(rawBeatmapset: any, allowDownload: boolean, forceRedownload: boolean = false, downloadUnranked: boolean = false): Promise<any> {
         // Check if we need to re-download and get current state
         const dbRow = await BeatmapsetRepository.getBeatmapsetById(rawBeatmapset.id);
 
@@ -221,7 +221,8 @@ export class BeatmapsetController {
             try {
                 let setDownloadDatabase = false;
                 if (allowDownload === true) {
-                    if (rawBeatmapset.status == "graveyard" || rawBeatmapset.status == "wip" || rawBeatmapset.status == "pending") {
+                    const isUnranked = rawBeatmapset.status == "graveyard" || rawBeatmapset.status == "wip" || rawBeatmapset.status == "pending";
+                    if (isUnranked && !downloadUnranked) {
                         // Graveyard/wip/pending maps are downloaded by GraveyardDownloader task
                         // (400/day) - skip immediate download here
                         setDownloadDatabase = false;

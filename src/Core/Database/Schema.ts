@@ -106,6 +106,7 @@ export class Schema {
                 "discussion_locked" BOOLEAN NULL DEFAULT NULL,
                 "download_disabled" BOOLEAN NULL DEFAULT NULL,
                 "downloaded" BOOLEAN NULL DEFAULT NULL,
+                "downloaded_last_updated" TIMESTAMPTZ NULL DEFAULT NULL,
                 "favourite_count" BIGINT NULL DEFAULT NULL,
                 "file_size" BIGINT NULL DEFAULT NULL,
                 "genre_id" SMALLINT NULL DEFAULT NULL,

@@ -353,6 +353,14 @@ export class BeatmapsetRepository {
         );
     }
 
+    // run after insertBeatmapset saved the new last_updated
+    static async markDownloadedVersion(id: number): Promise<void> {
+        await pool.query(
+            `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET downloaded_last_updated = last_updated WHERE id = $1`,
+            [id]
+        );
+    }
+
     static async markDownloadDisabled(id: bigint): Promise<void> {
         await pool.query(
             `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET download_disabled = true WHERE id = $1`,

@@ -163,17 +163,35 @@ export class BeatmapsetController {
             } else if (dbRow.downloaded && fileExistsOnDisk) {
                 // Already downloaded and file exists, check if there are updates
                 const apiUpdated = new Date(rawBeatmapset.last_updated || "");
-                const dbUpdated = dbRow.last_updated ? new Date(dbRow.last_updated) : null;
+
+                // rows from before downloaded_last_updated existed only have last_updated
+                let fileUpdated = null;
+                if (dbRow.downloaded_last_updated) {
+                    fileUpdated = new Date(dbRow.downloaded_last_updated);
+                } else if (dbRow.last_updated) {
+                    fileUpdated = new Date(dbRow.last_updated);
+                }
 
                 // Only re-download if there are updates
-                if (dbUpdated && apiUpdated > dbUpdated) {
+                if (fileUpdated && apiUpdated > fileUpdated) {
                     needDownload = true;
                 }
             } else if (!dbRow.downloaded && fileExistsOnDisk) {
-                // File exists on disk but DB says not downloaded - fix the DB state
-                downloadedState = true;
-                needDownload = false;
-                console.log(chalk.blue(`Fixed DB state for beatmapset ${rawBeatmapset.id} (file exists, marked as downloaded)`));
+                const apiUpdated = new Date(rawBeatmapset.last_updated || "");
+
+                let fileIsOld = false;
+                if (dbRow.downloaded_last_updated) {
+                    fileIsOld = apiUpdated > new Date(dbRow.downloaded_last_updated);
+                }
+
+                if (fileIsOld) {
+                    needDownload = true;
+                } else {
+                    // File exists on disk but DB says not downloaded - fix the DB state
+                    downloadedState = true;
+                    needDownload = false;
+                    console.log(chalk.blue(`Fixed DB state for beatmapset ${rawBeatmapset.id} (file exists, marked as downloaded)`));
+                }
             } else if (!fileExistsOnDisk) {
                 // Not downloaded yet or file missing, download it (unless missing audio)
                 needDownload = true;
@@ -240,6 +258,9 @@ export class BeatmapsetController {
                 
                 await BeatmapsetRepository.insertBeatmapset(beatmapset);
                 await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, setDownloadDatabase);
+                if (setDownloadDatabase) {
+                    await BeatmapsetRepository.markDownloadedVersion(rawBeatmapset.id);
+                }
             } catch (dlErr) {
                 console.warn(
                     chalk.yellow(`Download failed for beatmapset ${rawBeatmapset.id}:`),

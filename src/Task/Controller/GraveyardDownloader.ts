@@ -77,6 +77,7 @@ export class GraveyardDownloader {
                             console.log('GraveyardDownloader: ' + downloadUrl);
                             const { filePath, fileSize } = await DownloadService.downloadBeatmapset(downloadUrl, beatmapsetId);
                             await BeatmapsetRepository.updateDownloadState(BigInt(beatmapsetId), true, BigInt(fileSize));
+                            await BeatmapsetRepository.markDownloadedVersion(beatmapsetId);
                             downloaded++;
 
                             console.log(chalk.green(

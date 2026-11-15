@@ -26,6 +26,7 @@ export interface Beatmapset {
     discussion_locked: boolean | null;
     download_disabled: boolean | null;
     downloaded: boolean | null;
+    downloaded_last_updated: Date | null;
     favourite_count: bigint | null;
     file_size: bigint | null;
     genre_id: number | null;

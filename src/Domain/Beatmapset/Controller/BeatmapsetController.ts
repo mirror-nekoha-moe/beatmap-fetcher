@@ -57,7 +57,7 @@ export class BeatmapsetController {
         return newHighest;
     }
   
-    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false, throwOnError: boolean = false, downloadUnranked: boolean = false): Promise<any> {
+    static async fetchBeatmapsetFromOsu(id: number, allowDownload: boolean, forceRedownload: boolean = false, throwOnError: boolean = false, downloadUnranked: boolean = false, alwaysDownload: boolean = false): Promise<any> {
         let osuApiInstance = await OsuApiService.v2.getApiInstance();
   
         try {
@@ -105,7 +105,7 @@ export class BeatmapsetController {
                 return null;
             }
 
-            return await this.processBeatmapset(rawBeatmapset, allowDownload, forceRedownload, downloadUnranked);
+            return await this.processBeatmapset(rawBeatmapset, allowDownload, forceRedownload, downloadUnranked, alwaysDownload);
         } catch (err: any) {
             const details = err instanceof Error
                 ? err.message
@@ -121,7 +121,7 @@ export class BeatmapsetController {
     /**
     * Beatmapset processer
     */
-    static async processBeatmapset(rawBeatmapset: any, allowDownload: boolean, forceRedownload: boolean = false, downloadUnranked: boolean = false): Promise<any> {
+    static async processBeatmapset(rawBeatmapset: any, allowDownload: boolean, forceRedownload: boolean = false, downloadUnranked: boolean = false, alwaysDownload: boolean = false): Promise<any> {
         // Check if we need to re-download and get current state
         const dbRow = await BeatmapsetRepository.getBeatmapsetById(rawBeatmapset.id);
 
@@ -160,6 +160,9 @@ export class BeatmapsetController {
                 // - re-download
                 // - flip downloaded=false            
                 needDownload = false;
+            } else if (alwaysDownload) {
+                // map could exist before it is ranked
+                needDownload = true;
             } else if (dbRow.downloaded && fileExistsOnDisk) {
                 // Already downloaded and file exists, check if there are updates
                 const apiUpdated = new Date(rawBeatmapset.last_updated || "");

@@ -81,58 +81,49 @@ export class DownloadService {
     }
 
     private static async attemptDownload(url: string, beatmapsetId: number, attempt: number): Promise<{ filePath: string; fileSize: number }> {
-        // Create the beatmapset folder
         const folderPath = path.join(this.basePath, String(beatmapsetId));
         fs.mkdirSync(folderPath, { recursive: true });
 
-        // Fetch types are implicitly included in recent Node versions but let's add a type check
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error("Failed to download: " + response.statusText);
         }
 
-        // Get filename from Content-Disposition header
-        // const cd = response.headers.get("content-disposition");
-        // if (!cd) throw new Error("Server did not provide a filename");
-
-        // const match = cd.match(/filename\*=UTF-8''(.+)|filename="(.+)"/);
-        // if (!match) throw new Error("Could not extract filename from headers");
-
         let filename: string = `${beatmapsetId}.osz`;
-        // try {
-        //     filename = decodeURIComponent(match[1] || match[2]);
-        // } catch {
-        //     // Filename contains invalid percent-encoded sequences - use raw value
-        //     filename = match[1] || match[2];
-        // }
-        
-        // Sanitize filename: replace invalid filesystem characters
-        // Replace characters that are illegal in SMB/CIFS filenames
-        // / -> ⧸ (U+29F8), \ -> ⧹ (U+29F9), : -> ː (U+02D0)
-        // filename = filename.replace(/\//g, '⧸').replace(/\\/g, '⧹').replace(/:/g, 'ː');
         
         const filePath = path.join(folderPath, filename);
+        // download with .tmp suffix
+        const tmpPath = `${filePath}.tmp`;
 
         // Stream response to disk
-        const fileStream = fs.createWriteStream(filePath);
+        const fileStream = fs.createWriteStream(tmpPath);
         const readableStream = Readable.fromWeb(response.body as any);
         try {
             await pipeline(readableStream, fileStream);
+
+            // Strip multipart form-data wrapper if present.
+            // Some responses prepend headers before the ZIP content (PK\x03\x04 magic).
+            await DownloadService.stripMultipartPrefix(tmpPath);
+
+            // Validate the zip has a proper end-of-central-directory signature
+            await DownloadService.validateZip(tmpPath);
         } catch (err) {
             // Clean up partial file on stream failure
             try { 
-                fs.unlinkSync(filePath);
+                fs.unlinkSync(tmpPath);
             } 
             catch {}
             throw err;
         }
 
-        // Strip multipart form-data wrapper if present.
-        // Some responses prepend headers before the ZIP content (PK\x03\x04 magic).
-        await DownloadService.stripMultipartPrefix(filePath);
+        fs.renameSync(tmpPath, filePath);
 
-        // Validate the zip has a proper end-of-central-directory signature
-        await DownloadService.validateZip(filePath);
+        // remove .osz files with the old naming
+        for (const file of fs.readdirSync(folderPath)) {
+            if (file.endsWith('.osz') && file !== filename) {
+                fs.unlinkSync(path.join(folderPath, file));
+            }
+        }
 
         // Get file size in bytes
         const stats = fs.statSync(filePath);

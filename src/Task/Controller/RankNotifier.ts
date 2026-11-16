@@ -146,7 +146,7 @@ export class RankNotifier {
                         if (beatmapsetId) {
                             try {
                                 console.log(chalk.cyan(`RankNotifier: downloading beatmapset ${beatmapsetId} (${event.type})...`));
-                                await BeatmapsetController.fetchBeatmapsetFromOsu(beatmapsetId, true);
+                                await BeatmapsetController.fetchBeatmapsetFromOsu(beatmapsetId, true, false, false, false, true);
                                 await WebhookService.sendDownloadEmbed(event);
                                 console.log(chalk.green(`RankNotifier: downloaded and notified beatmapset ${beatmapsetId}`));
                             } catch (dlErr) {

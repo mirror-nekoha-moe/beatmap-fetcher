@@ -178,6 +178,8 @@ export class BeatmapsetController {
                 }
 
                 if (fileIsOld) {
+                    // keep serving the old file until the new one is there
+                    downloadedState = true;
                     needDownload = true;
                 } else {
                     // File exists on disk but DB says not downloaded - fix the DB state
@@ -250,9 +252,11 @@ export class BeatmapsetController {
                 }
                 
                 await BeatmapsetRepository.insertBeatmapset(beatmapset);
-                await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, setDownloadDatabase);
                 if (setDownloadDatabase) {
+                    await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, true);
                     await BeatmapsetRepository.markDownloadedVersion(rawBeatmapset.id);
+                } else if (!fileExistsOnDisk) {
+                    await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, false);
                 }
             } catch (dlErr) {
                 console.warn(

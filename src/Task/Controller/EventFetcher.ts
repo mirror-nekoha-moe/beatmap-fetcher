@@ -15,7 +15,7 @@ const MAX_FETCH_ATTEMPTS = 5;
 export class EventFetcher {
     private static failedAttempts = new Map<number, number>();
 
-    private static async handleEvent(event: any, beatmapsetId: number): Promise<void> {
+    private static async handleEvent(event: any, beatmapsetId: number | null): Promise<void> {
         await EventPublishService.publish('events', event, beatmapsetId);
     }
 
@@ -75,7 +75,7 @@ export class EventFetcher {
         }
 
         const beatmapsetIds = new Set<number>();
-        const beatmapsetEvents: { event: any; beatmapsetId: number }[] = [];
+        const allEvents: { event: any; beatmapsetId: number | null }[] = [];
         const uploadEvents = new Map<number, any>();
         const updatedIds = new Set<number>();
         const revivedIds = new Set<number>();
@@ -96,19 +96,17 @@ export class EventFetcher {
                 if (event.id > lastEventId) {
                     lastEventId = event.id;
                 }
-                if (!BEATMAPSET_TYPES.has(event.type)) {
-                    continue;
-                }
+                let beatmapsetId: number | null = null;
                 const url = (event as any).beatmapset?.url as string | undefined;
-                if (!url) {
-                    continue;
+                if (BEATMAPSET_TYPES.has(event.type) && url) {
+                    beatmapsetId = this.parseBeatmapsetId(url);
                 }
-                const beatmapsetId = this.parseBeatmapsetId(url);
+                allEvents.push({ event, beatmapsetId });
+
                 if (!beatmapsetId) {
                     continue;
                 }
                 beatmapsetIds.add(beatmapsetId);
-                beatmapsetEvents.push({ event, beatmapsetId });
 
                 if (event.type === 'beatmapsetUpload') {
                     uploadEvents.set(beatmapsetId, event);
@@ -165,7 +163,7 @@ export class EventFetcher {
             }
         }
 
-        for (const { event, beatmapsetId } of beatmapsetEvents) {
+        for (const { event, beatmapsetId } of allEvents) {
             try {
                 await this.handleEvent(event, beatmapsetId);
             } catch (err) {

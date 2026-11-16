@@ -164,7 +164,7 @@ export class BeatmapsetController {
                 // Already downloaded and file exists, check if there are updates
                 const apiUpdated = new Date(rawBeatmapset.last_updated || "");
 
-                // rows from before downloaded_last_updated existed only have last_updated
+                // old rows have no downloaded_last_updated yet
                 let fileUpdated = null;
                 if (dbRow.downloaded_last_updated) {
                     fileUpdated = new Date(dbRow.downloaded_last_updated);

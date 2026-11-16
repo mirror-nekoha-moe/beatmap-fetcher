@@ -165,7 +165,6 @@ export class EventFetcher {
             }
         }
 
-        // after the fetches, the server reads the fresh set from the db
         for (const { event, beatmapsetId } of beatmapsetEvents) {
             try {
                 await this.handleEvent(event, beatmapsetId);

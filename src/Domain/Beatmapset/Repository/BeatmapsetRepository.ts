@@ -353,7 +353,7 @@ export class BeatmapsetRepository {
         );
     }
 
-    // run after insertBeatmapset saved the new last_updated
+    // after insertBeatmapset
     static async markDownloadedVersion(id: number): Promise<void> {
         await pool.query(
             `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET downloaded_last_updated = last_updated WHERE id = $1`,

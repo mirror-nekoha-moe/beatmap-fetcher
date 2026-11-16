@@ -137,16 +137,6 @@ export class BeatmapsetController {
             .then(files => files.some(file => file.endsWith('.osz')))
             .catch(() => false);
 
-        // Force redownload: delete existing .osz files so the normal logic re-downloads
-        if (forceRedownload && fileExistsOnDisk) {
-            console.log(chalk.yellow(`[ForceRedownload] Deleting existing .osz for beatmapset ${rawBeatmapset.id}`));
-            const files = await fsp.readdir(folderPath).catch(() => [] as string[]);
-            for (const file of files.filter(f => f.endsWith('.osz'))) {
-                await fsp.unlink(path.join(folderPath, file)).catch(() => {});
-            }
-            await BeatmapsetRepository.markBeatmapsetDownloaded(rawBeatmapset.id, false);
-        }
-
         // Determine the correct downloaded state
         let downloadedState = dbRow?.downloaded ?? false;
 
@@ -158,9 +148,9 @@ export class BeatmapsetController {
                 // Became DMCA or deleted later
                 // NEVER:
                 // - re-download
-                // - flip downloaded=false            
+                // - flip downloaded=false
                 needDownload = false;
-            } else if (alwaysDownload) {
+            } else if (alwaysDownload || forceRedownload) {
                 // map could exist before it is ranked
                 needDownload = true;
             } else if (dbRow.downloaded && fileExistsOnDisk) {

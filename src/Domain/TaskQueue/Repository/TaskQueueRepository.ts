@@ -36,7 +36,7 @@ export class TaskQueueRepository {
             {
                 task: 'fetch_beatmapset',
                 description: 'Force-fetch and process a single beatmapset from the osu! API. Use --force to re-download even if already on disk.',
-                params_schema: { id: 'number (required) - beatmapset ID', force: 'bool (optional) - delete and re-download existing file' },
+                params_schema: { id: 'number (required) - beatmapset ID', force: 'bool (optional) - re-download even if the file is up to date' },
             },
             {
                 task: 'scan_recent',

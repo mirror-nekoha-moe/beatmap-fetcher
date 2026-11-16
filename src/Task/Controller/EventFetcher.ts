@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 
 import { BeatmapsetController } from '@Domain/Beatmapset/Controller/BeatmapsetController';
+import { BeatmapsetRepository } from '@Domain/Beatmapset/Repository/BeatmapsetRepository';
 import { StatsRepository } from '@Domain/Stats/Repository/StatsRepository';
 import { OsuApiService } from '@Service/OsuApiService';
 import { EventPublishService } from '@Service/EventPublishService';
@@ -78,6 +79,7 @@ export class EventFetcher {
         const uploadEvents = new Map<number, any>();
         const updatedIds = new Set<number>();
         const revivedIds = new Set<number>();
+        const deleteEvents = new Map<number, any>();
         let firstUploadId = 0;
         let eventCount = 0;
         let page = 0;
@@ -118,6 +120,9 @@ export class EventFetcher {
                 if (event.type === 'beatmapsetUpdate') {
                     updatedIds.add(beatmapsetId);
                 }
+                if (event.type === 'beatmapsetDelete') {
+                    deleteEvents.set(beatmapsetId, event);
+                }
                 if (event.type === 'beatmapsetRevive') {
                     revivedIds.add(beatmapsetId);
                 }
@@ -137,6 +142,13 @@ export class EventFetcher {
             const isRevive = revivedIds.has(beatmapsetId);
             const beatmapset = await this.fetchBeatmapset(beatmapsetId, isUpload || isUpdate || isRevive);
             fetchedBeatmapsets.set(beatmapsetId, beatmapset);
+        }
+
+        // deleted sets
+        for (const [beatmapsetId, event] of deleteEvents) {
+            if (!fetchedBeatmapsets.get(beatmapsetId)) {
+                await BeatmapsetRepository.markDeleted(beatmapsetId, new Date(event.created_at));
+            }
         }
 
         // fetch errors throw before this, cursor stays and next run retries

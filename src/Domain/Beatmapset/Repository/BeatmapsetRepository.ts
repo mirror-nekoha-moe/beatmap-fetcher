@@ -361,6 +361,13 @@ export class BeatmapsetRepository {
         );
     }
 
+    static async markDeleted(id: number, deletedAt: Date): Promise<void> {
+        await pool.query(
+            `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL`,
+            [deletedAt, id]
+        );
+    }
+
     static async markDownloadDisabled(id: bigint): Promise<void> {
         await pool.query(
             `UPDATE public.${Environment.env.TABLE_BEATMAPSET} SET download_disabled = true WHERE id = $1`,

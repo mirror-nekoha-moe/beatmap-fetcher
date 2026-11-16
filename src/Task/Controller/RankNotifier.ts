@@ -3,6 +3,7 @@ import * as osu from 'osu-api-v2-js';
 import { BaseTask } from '@Task/BaseTask';
 import { OsuApiService } from '@Service/OsuApiService';
 import { WebhookService } from '@Service/WebhookService';
+import { EventPublishService } from '@Service/EventPublishService';
 import { StatsRepository } from '@Domain/Stats/Repository/StatsRepository';
 import { BeatmapsetController } from '@Domain/Beatmapset/Controller/BeatmapsetController';
 
@@ -56,8 +57,12 @@ const EVENT_TYPES: osu.Beatmapset.Event.Any['type'][] = [
 
 export class RankNotifier {
 
-    // TODO
     private static async handleEvent(event: any): Promise<void> {
+        let beatmapsetId = null;
+        if (event.beatmapset?.id) {
+            beatmapsetId = event.beatmapset.id as number;
+        }
+        await EventPublishService.publish('beatmapset_events', event, beatmapsetId);
     }
 
     static async run(intervalMinutes: number, errorDelayMinutes: number): Promise<void> {
@@ -119,8 +124,6 @@ export class RankNotifier {
                         newHighestId = event.id;
                     }
 
-                    await RankNotifier.handleEvent(event);
-
                     const eventBeatmapsetId = event.beatmapset?.id as number | undefined;
                     if (eventBeatmapsetId && METADATA_TYPES.has(event.type)) {
                         refreshIds.add(eventBeatmapsetId);
@@ -164,6 +167,14 @@ export class RankNotifier {
 
                 if (newHighestId > lastEventId) {
                     await StatsRepository.updateEventCursor(newHighestId);
+                }
+
+                for (const event of newEvents) {
+                    try {
+                        await RankNotifier.handleEvent(event);
+                    } catch (err) {
+                        console.warn(chalk.yellow(`RankNotifier: failed to handle event ${event.id}:`), err instanceof Error ? err.message : err);
+                    }
                 }
 
                 if (notified > 0) {

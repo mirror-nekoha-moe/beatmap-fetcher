@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { BeatmapsetController } from '@Domain/Beatmapset/Controller/BeatmapsetController';
 import { StatsRepository } from '@Domain/Stats/Repository/StatsRepository';
 import { OsuApiService } from '@Service/OsuApiService';
+import { EventPublishService } from '@Service/EventPublishService';
 import { WebhookService } from '@Service/WebhookService';
 import { BaseTask } from '@Task/BaseTask';
 
@@ -13,8 +14,8 @@ const MAX_FETCH_ATTEMPTS = 5;
 export class EventFetcher {
     private static failedAttempts = new Map<number, number>();
 
-    // TODO
-    private static async handleEvent(event: any): Promise<void> {
+    private static async handleEvent(event: any, beatmapsetId: number): Promise<void> {
+        await EventPublishService.publish('events', event, beatmapsetId);
     }
 
     // cursor is base64 {"event_id": N}, build it ourselves to resume
@@ -73,6 +74,7 @@ export class EventFetcher {
         }
 
         const beatmapsetIds = new Set<number>();
+        const beatmapsetEvents: { event: any; beatmapsetId: number }[] = [];
         const uploadEvents = new Map<number, any>();
         const updatedIds = new Set<number>();
         const revivedIds = new Set<number>();
@@ -95,8 +97,6 @@ export class EventFetcher {
                 if (!BEATMAPSET_TYPES.has(event.type)) {
                     continue;
                 }
-                await this.handleEvent(event);
-
                 const url = (event as any).beatmapset?.url as string | undefined;
                 if (!url) {
                     continue;
@@ -106,6 +106,7 @@ export class EventFetcher {
                     continue;
                 }
                 beatmapsetIds.add(beatmapsetId);
+                beatmapsetEvents.push({ event, beatmapsetId });
 
                 if (event.type === 'beatmapsetUpload') {
                     uploadEvents.set(beatmapsetId, event);
@@ -149,6 +150,15 @@ export class EventFetcher {
                 await new Promise(r => setTimeout(r, 500));
             } catch (err) {
                 console.warn(chalk.yellow(`EventFetcher: failed to send upload embed for ${beatmapsetId}:`), err instanceof Error ? err.message : err);
+            }
+        }
+
+        // after the fetches, the server reads the fresh set from the db
+        for (const { event, beatmapsetId } of beatmapsetEvents) {
+            try {
+                await this.handleEvent(event, beatmapsetId);
+            } catch (err) {
+                console.warn(chalk.yellow(`EventFetcher: failed to handle event ${event.id}:`), err instanceof Error ? err.message : err);
             }
         }
 

@@ -110,6 +110,9 @@ export class Environment {
         MIRROR_LOG_DOWNLOAD: String,
         MIRROR_LOG_UPLOAD: String,
         MIRROR_BASE_URL: String,
+
+        REDIS_HOST: String,
+        REDIS_PORT: String,
     };
 }
 

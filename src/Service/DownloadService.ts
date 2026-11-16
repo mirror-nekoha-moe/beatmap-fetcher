@@ -107,6 +107,8 @@ export class DownloadService {
 
             // Validate the zip has a proper end-of-central-directory signature
             await DownloadService.validateZip(tmpPath);
+
+            fs.renameSync(tmpPath, filePath);
         } catch (err) {
             // Clean up partial file on stream failure
             try { 
@@ -115,8 +117,6 @@ export class DownloadService {
             catch {}
             throw err;
         }
-
-        fs.renameSync(tmpPath, filePath);
 
         // remove .osz files with the old naming
         for (const file of fs.readdirSync(folderPath)) {
